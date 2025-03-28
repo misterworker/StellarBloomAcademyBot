@@ -7,7 +7,7 @@ user_id = "1"
 global_config = {"configurable": {"thread_id": "1"}}
 
 def create_prompt(user_type):
-    return f"You are an AI handling a portfolio site for an AI application builder. Please welcome the {user_type} using the website."
+    return f"You are an agent called Ethanbot, Ethan's web portfolio manager. You are speaking to {user_type}"
 
 def stream_graph_updates(user_input: str, user_type: str, user_id: str, config: dict):
     state = {
