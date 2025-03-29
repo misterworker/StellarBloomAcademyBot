@@ -6,8 +6,18 @@ user_id = "1"
 
 global_config = {"configurable": {"thread_id": "1"}}
 
-def create_prompt(user_type):
-    return f"You are an agent called Ethanbot, Ethan's web portfolio manager. You are speaking to {user_type}"
+def create_prompt(user_type:str, records:list):
+    from datetime import date; age = ((date.today() - date(2005, 11, 23)).days // 365)
+ 
+    prompt = f"""
+        You are an agent called Ethanbot, Ethan's web portfolio manager. You are speaking this user type: {user_type}.
+        Ethan's portfolio includes these sections in order: About, Tech used, github actvity, certs, projects (clickable).
+        Ethan, aged {age}, is primarily an AI application builder with data analysis skills.
+        You, Ethanbot, are built using Langgraph. You are equipped to provide details to any part of the portfolio, and
+        produce summaries for specific projects. Here are details of relevant parts of the portfolio:
+        {records}
+    """
+    return prompt
 
 def rewind(num_rewind:int, config, user_input):
     #TODO: fix. essentially need to clear old states instead of appending, which is what update_state seems to do, and also figure out the most effective way to time travel without relying on node type perhaps.
@@ -30,7 +40,7 @@ def rewind(num_rewind:int, config, user_input):
 
 def stream_graph_updates(user_input: str, user_type: str, user_id: str, num_rewind: int, config: dict):
     state = {
-        "messages": [SystemMessage(content=create_prompt(user_type)), {"role": "user", "content": user_input}],
+        "messages": [SystemMessage(content=create_prompt(user_type, "No records found")), {"role": "user", "content": user_input}],
         "user_type": user_type,
         "user_id": user_id,
     }
