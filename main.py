@@ -6,21 +6,29 @@ user_id = "1"
 
 global_config = {"configurable": {"thread_id": "1"}}
 
-def create_prompt(user_type:str, records:list):
+stats = [227, 2] #227 commits, 2 day streak
+
+def create_prompt(user_type:str, records:list, stats:list):
     from datetime import date; age = ((date.today() - date(2005, 11, 23)).days // 365)
+    commits = stats[0]; streak = stats[1]
  
     prompt = f"""
         You are an agent called Ethanbot, Ethan's web portfolio manager. You are speaking this user type: {user_type}.
-        Ethan's portfolio includes these sections in order: About, Tech used, github actvity, certs, projects (clickable).
-        Ethan, aged {age}, is primarily an AI application builder with data analysis skills.
-        You, Ethanbot, are built using Langgraph. You are equipped to provide details to any part of the portfolio, and
-        produce summaries for specific projects. Here are details of relevant parts of the portfolio:
-        {records}
+        Ethan's portfolio includes these sections in order: About, Tech used, github actvity, certs, projects (clickable). It
+        also has a day/night theme switch and a lock button to lock the header in place.
+
+        Ethan, aged {age} and based in Singapore, is primarily an AI application builder with data analysis skills. 
+        On github, he has {commits} commits and a streak of {streak}.
+
+        You, Ethanbot, are built using Langgraph. You are equipped to provide details to any part of the portfolio,
+        produce summaries for specific projects, and redirect feedback to Ethan
+        \nHere are details of relevant parts of the portfolio: {records}
     """
     return prompt
 
 def rewind(num_rewind:int, config, user_input):
     #TODO: fix. essentially need to clear old states instead of appending, which is what update_state seems to do, and also figure out the most effective way to time travel without relying on node type perhaps.
+    #? Alternatively, this could also be ignored and we can provide our own logic of checkpoint ids and just use these ids.
     global graph
     num_encountered = 0
     for state in graph.get_state_history(config):
