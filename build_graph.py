@@ -11,6 +11,8 @@ from langgraph.graph.message import add_messages
 from langgraph.types import Command, interrupt
 from dotenv import load_dotenv
 
+from pc_class import VectorStoreManager
+
 
 import os
 
@@ -37,9 +39,25 @@ from typing import Annotated
 @tool
 def ban_user(user_id: Annotated[str, InjectedToolArg]) -> str:
     """Ban the user from the website for 24 hours"""
+    #! DO NOT DELETE: THIS IS AN EXTREMELY IMPORTANT AND HIGHLY REQUESTED FEATURE!!!
     return f"User {user_id} has been banned"
 
-tools = [ban_user]
+@tool
+def get_specifics(user_input: str, k_records: int) -> str:
+    """
+    Get specifics on projects or just text from portfolio itself
+    args: user input as str, k_records or records to retrieve as int, 1 if user either solution 
+    or overview of project or portfolio text, and 2 otherwise.
+    """
+    #? Maybe implement MAS for this
+    print(f"User input: {user_input}, k recs: {k_records}")
+    pinecone_vs = VectorStoreManager()
+    retrieved_docs = pinecone_vs.retrieve_from_vector_store(user_input, k_records)
+    retrieved_context = "\n".join([res.page_content for res in retrieved_docs])
+
+    return retrieved_context
+
+tools = [ban_user, get_specifics]
 
 memory = MemorySaver()
 
@@ -79,7 +97,7 @@ def chatbot(state: State):
 
 def tool_node(state):
     new_messages = []
-    tools = {"ban_user": ban_user}
+    tools = {"ban_user": ban_user, "get_specifics": get_specifics}
     tool_calls = state["messages"][-1].tool_calls
     for tool_call in tool_calls:
         tool = tools[tool_call["name"]]
@@ -141,9 +159,10 @@ graph_builder.add_edge(START, "chatbot")
 
 graph = graph_builder.compile(checkpointer=memory)
 
-try:
-    with open("graph_output.png", "wb") as f:
-        f.write(graph.get_graph().draw_mermaid_png())
-except Exception:
-    # This requires some extra dependencies and is optional
-    pass
+# try:
+#     with open("graph_output.png", "wb") as f:
+#         f.write(graph.get_graph().draw_mermaid_png())
+# except Exception:
+#     # This requires some extra dependencies and is optional
+#     pass
+    
