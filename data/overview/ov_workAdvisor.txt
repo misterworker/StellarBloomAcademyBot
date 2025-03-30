@@ -1,0 +1,10 @@
+Overview - workAdvisor
+
+A web application that focuses on ensuring that students and professionals get equal opportunities. It features a post predictor, 
+salary predictor and educational opportunities predictor. I personally worked on the post predictor myself, which predicts post 
+engagement, which reduces the lack of access to personalised guidance.
+Features: Fully Connected Neural Network with self scraped and self trained data, AI for ease of use (Automatically suggesting a 
+revised post title and content), history of post engagements and the ability to restore them, AI filter to prevent abuse and PII 
+leaks. Moreover, there is a page tour using Driver.js, ensuring the user has a grasp on the page features before calling the model.
+Technologies used: NextJS, Tailwind, Tensorflow, Langchain, BeautifulSoup
+Github: https://portfolio-phi-mocha-72.vercel.app/projects/d//github.com/misterworker/workAdvisor

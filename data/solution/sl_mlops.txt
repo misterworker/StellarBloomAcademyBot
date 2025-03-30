@@ -1,0 +1,23 @@
+Solution - Used Car Price Predictor (MLOps)
+
+End-to-End ML Pipeline:
+1. Dataset Versioning: Managed with DVC + Google Cloud Storage for reproducibility.
+2. Dependency & Config Management: Poetry (dependencies) + Hydra (dynamic hyperparameter tuning).
+3. Experiment Tracking: MLflow logs model performance & hyperparameter variations.
+
+Model Training & Deployment:
+1. PyCaret-based pipeline:
+    a) EDA → Identifies dataset trends.
+    b) Model selection & tuning → Uses compare_models() to optimize performance.
+    c) Pipeline storage → Trained models stored as pickled files.
+2. Deployment with BentoML (efficient, scalable inference):
+    a) Automatic endpoint creation & batch processing for real-time predictions.
+    b) Preprocessing & inference logic managed in bentoml/service.py.
+
+Web App & API Integration:
+Next.js frontend for car price predictions with a BentoML API backend.
+
+Features:
+1. Batch predictions for multiple cars.
+2. Random auto-fill for easy testing.
+3. Real-time results displayed interactively.

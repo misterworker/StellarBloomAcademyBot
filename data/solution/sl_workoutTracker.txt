@@ -1,0 +1,4 @@
+Solution - WorkoutTracker
+
+The application features theme switching, firebase authentication and CRUD for workouts, history as well as exercises. 
+It is also able to process payment, and visualise statistics. Kotlin and Android Studio were used to create the application.

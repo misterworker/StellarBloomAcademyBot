@@ -1,0 +1,22 @@
+Social Links:
+GitHub: https://github.com/misterworker
+LinkedIn: https://www.linkedin.com/in/ethan-lee-224659251
+Telegram: https://t.me/eltnx
+Email: ethanroo2016@gmail.com
+
+About:
+AI Application Developer, Data Analyst, Casual Armwrestler
+
+I haven't always been in the tech space, but my interest piqued when I entered Applied AI & Analytics at Nanyang Polytechnic. Since then, I founded a startup called Maibel.ai and created various personal projects. I am well versed in areas like Machine Learning, Deep Learning, Data Analysis, as well as creating Generative AI applications.
+
+I also take an interest in fitness, casually trying out powerlifting, bodybuilding, and most recently armwrestling.
+
+Technologies Used:
+Python, Langchain, Langgraph, Docker, GitHub, React Native, Expo, Next.js, FastAPI
+
+Certificates:
+PowerBI Data Analyast (PL300) - https://www.credly.com/badges/b3cb9742-e6fa-4aad-b328-69373b6178d5/public_url
+
+AWS Certified Cloud Practitioner - https://cp.certmetrics.com/amazon/en/public/verify/credential/8F6FGKNCV2RQQH3P
+
+AI Literacy - https://f017e7ce-01d9-440c-9f94-a0fe360f6326.filesusr.com/ugd/41d0c8_1cf7a67626b94fd89125b698511025a7.pdf

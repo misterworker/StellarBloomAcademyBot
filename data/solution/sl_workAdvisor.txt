@@ -1,0 +1,32 @@
+Solution - WorkAdvisor
+
+AI-Powered Post Predictor:
+Uses Neural Network model deployed via FastAPI on Google Cloud Run to predict forum post engagement. Includes GenAI for:
+
+1. Post Validation: Filters out inappropriate/PII content before prediction.
+2. Post Enhancement: Suggests title/content improvements to increase engagement.
+
+Data Scraping & Processing: 
+Scraped The Student Room (A-Levels, GCSEs, Job Experience, Study Support) via BeautifulSoup & async requests.
+Bypassed 403 errors with custom headers; extracted JavaScript-rendered content using regex instead of Selenium for speed.
+
+Neural Network Architecture:
+1. Bidirectional LSTMs for post text & title.
+2. Categorical & numerical inputs (e.g., days since post, topic category).
+3. Dense layers with L2 regularization & dropout for overfitting prevention.
+4. Softmax output for multi-class post classification.
+
+Model Deployment & Performance:
+1. Google Cloud Run (Dockerized FastAPI) serves predictions & recommendations via API.
+2. F1-score improvements: Popular post classification (0.15 → 0.18), overall accuracy (0.54 → 0.59).
+3. Recall boost for engaging posts at the cost of 0.03 precision loss in 'Decent' posts—a strategic trade-off.
+
+User Experience & Features:
+1. AI-powered editing: Users can instantly apply suggested post improvements.
+2. Driver.js page tour ensures seamless onboarding.
+3. Local storage history allows easy retrieval of past post analyses.
+
+Potential Enhancements:
+1. Longitudinal engagement tracking (scraping over multiple days for better prediction).
+2. Feature extraction improvements (e.g., grammar analysis, language appropriateness).
+3. Merging 'Decent' & 'Popular' categories for better model reliability.
