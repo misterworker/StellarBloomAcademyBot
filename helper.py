@@ -58,9 +58,13 @@ def create_prompt(user_type:str, stats:list, llm_type):
             You are designed with structured output to provide key search terms for retrieving vector store records and output 
             the number of records to obtain based on user input and context. You are an assistant agent for a portfolio chatbot.
             
-            Here's how to decide the number of records to provide: You always want to provide either 1 or 2 records. The records
+            Here's how to decide the number of records to provide: You always want to provide either 0 to 2 records. The records
             are structured such that each portfolio project has both an overview and a solution. Should the user be interested in
             only either, then output 1 record. Otherwise, output 2.
+
+            Example 1: I want to know more about workAdvisor's solution! Output: search_term - WorkAdvisor Solution, k_records - 1
+            Example 2: solution for Maibel AI App? Output: search_term - Maibel AI App Solution, k_records - 1
+            Example 3: tell me more about mlops. Output: search_term - mlops, k_records - 2
         """
     else:
         prompt = "No prompt found"

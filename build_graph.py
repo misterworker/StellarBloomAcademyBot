@@ -1,14 +1,15 @@
 from langchain_core.messages import ToolMessage
 
-from typing import Annotated
-from typing_extensions import TypedDict, Literal
-
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.types import Command, interrupt
 
+from typing import Annotated
+from typing_extensions import TypedDict, Literal
+
 from agents import chatbot_llm, RAG_llm, ban_user, get_specifics
+from helper import VectorStoreManager
 
 memory = MemorySaver()
 
@@ -28,6 +29,7 @@ graph_builder = StateGraph(State)
 
 from copy import deepcopy
 
+#* Agent Nodes
 def chatbot(state: State):
     message = chatbot_llm.invoke(state["messages"])
     assert len(message.tool_calls) <= 1
@@ -44,30 +46,23 @@ def chatbot(state: State):
 
     return {"messages": [message], "user_type": state["user_type"]}
 
-def tool_node(state):
-    new_messages = []
-    tools = {"ban_user": ban_user, "get_specifics": get_specifics}
-    tool_calls = state["messages"][-1].tool_calls
-    for tool_call in tool_calls:
-        tool = tools[tool_call["name"]]
-        result = tool.invoke(tool_call["args"])
-        print("result: ", result)
-        new_messages.append(
-            {
-                "role": "tool",
-                "name": tool_call["name"],
-                "content": result,
-                "tool_call_id": tool_call["id"],
-            }
-        )
-    return {"messages": new_messages}
+def rag(state: State):
+    result = RAG_llm.invoke(state["messages"])
+    print("rag result: ", result)
+    search_term = result.search_term
+    k_records = result.k_records
+    pinecone_vs = VectorStoreManager()
+    retrieved_docs = pinecone_vs.retrieve_from_vector_store(search_term, k_records)
+    retrieved_context = "\n".join([res.page_content for res in retrieved_docs])
 
+    return {"messages": [retrieved_context]}
+
+#* Tool related nodes
 def route_after_llm(state) -> Literal[END, "human_review_node"]:
     if len(state["messages"][-1].tool_calls) == 0:
         return END
-    else:
-        return "human_review_node"
-
+    return "human_review_node"
+        
 def human_review_node(state) -> Command[Literal["chatbot", "tools"]]:
     last_message = state["messages"][-1]
     tool_call = last_message.tool_calls[-1]
@@ -95,23 +90,57 @@ def human_review_node(state) -> Command[Literal["chatbot", "tools"]]:
             content="Tool execution skipped.",
         )
         return Command(goto="chatbot", update={"messages": [tool_message]})
+    
+def tool_node(state):
+    new_messages = []
+    tools = {"ban_user": ban_user, "get_specifics": get_specifics}
+    tool_calls = state["messages"][-1].tool_calls
+    for tool_call in tool_calls:
+        tool = tools[tool_call["name"]]
+        result = tool.invoke(tool_call["args"])
+        print("result: ", result)
+        new_messages.append(
+            {
+                "role": "tool",
+                "name": tool_call["name"],
+                "content": result,
+                "tool_call_id": tool_call["id"],
+            }
+        )
+    return {"messages": new_messages}
+
+def route_after_tool(state) -> Literal["rag", "chatbot"]:
+    last_message = state["messages"][-1]
+    print("route state after tool: ", last_message)
+
+    if isinstance(last_message, ToolMessage) and last_message.name == "get_specifics":
+        return "rag"
+    
+    return "chatbot"
 
 graph_builder.add_node("chatbot", chatbot)
 graph_builder.add_node("tools", tool_node)
+graph_builder.add_node("rag", rag)
 graph_builder.add_node(human_review_node)
+
+graph_builder.add_edge(START, "chatbot")
 graph_builder.add_conditional_edges(
     "chatbot",
     route_after_llm,
 )
-graph_builder.add_edge("tools", "chatbot")
-graph_builder.add_edge(START, "chatbot")
+# graph_builder.add_edge("tools", "chatbot")
+graph_builder.add_conditional_edges(
+    "tools",
+    route_after_tool,
+)
+graph_builder.add_edge("rag", END)
 
 graph = graph_builder.compile(checkpointer=memory)
 
-# try:
-#     with open("graph_output.png", "wb") as f:
-#         f.write(graph.get_graph().draw_mermaid_png())
-# except Exception:
-#     # This requires some extra dependencies and is optional
-#     pass
+try:
+    with open("graph_output.png", "wb") as f:
+        f.write(graph.get_graph().draw_mermaid_png())
+except Exception:
+    # This requires some extra dependencies and is optional
+    pass
     

@@ -41,13 +41,18 @@ def stream_graph_updates(user_input: str, user_type: str, user_id: str, num_rewi
             
             action = input("continue or no: ")
             for resume_event in graph.stream(Command(resume={"action": action}), config):
-                # print("RESUME_EVENT: ", resume_event)
                 try:
                     is_chatbot = resume_event.get("chatbot", False)
+                    is_rag = resume_event.get("rag", False)
                 except:
                     is_chatbot = False
+                    is_rag = False
                 if is_chatbot:
                     msg = resume_event["chatbot"]["messages"][-1].content
+                    if msg:
+                        print("ASSISTANT:", msg, "\n")
+                elif is_rag:
+                    msg = resume_event["rag"]["messages"][-1]
                     if msg:
                         print("ASSISTANT:", msg, "\n")
 

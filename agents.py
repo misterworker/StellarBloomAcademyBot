@@ -1,10 +1,13 @@
 from dotenv import load_dotenv
 from typing import Annotated
 
+from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langchain_core.tools import tool, InjectedToolArg
 from langchain_openai import ChatOpenAI
 
-from helper import VectorStoreManager, RAG
+from langgraph.types import Command, interrupt
+
+from helper import create_prompt, RAG
 import os
 
 load_dotenv()
@@ -19,17 +22,15 @@ def ban_user(user_id: Annotated[str, InjectedToolArg]) -> str:
     return f"User {user_id} has been banned"
 
 @tool
-def get_specifics(user_input: str, k_records: int) -> str:
+def get_specifics() -> str:
     """
     Pass to rag agent to retrieve specific project or portfolio information
-    """
-    #? Maybe implement MAS for this
-    print(f"User input: {user_input}")
-    pinecone_vs = VectorStoreManager()
-    retrieved_docs = pinecone_vs.retrieve_from_vector_store(user_input, k_records)
-    retrieved_context = "\n".join([res.page_content for res in retrieved_docs])
-
-    return retrieved_context
+    """    
+    return Command(
+        goto="rag",
+        update={"messages": SystemMessage(create_prompt("", [], "RAG"))},
+        # graph=Command.PARENT, #specify which graph to goto, defaults to current
+    )
 
 tools = [ban_user, get_specifics]
 
