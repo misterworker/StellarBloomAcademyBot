@@ -1,7 +1,7 @@
 from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langgraph.types import Command
-from build_graph import graph
 
+from build_graph import graph
 from helper import create_prompt
 
 user_id = "1"
@@ -30,7 +30,7 @@ def rewind(num_rewind:int, config, user_input):
 
 def stream_graph_updates(user_input: str, user_type: str, user_id: str, num_rewind: int, config: dict):
     state = {
-        "messages": [SystemMessage(content=create_prompt(user_type, [230, 3])), {"role": "user", "content": user_input}],
+        "messages": [SystemMessage(content=create_prompt(user_type, [230, 3], "chatbot")), {"role": "user", "content": user_input}],
         "user_type": user_type,
         "user_id": user_id,
     }

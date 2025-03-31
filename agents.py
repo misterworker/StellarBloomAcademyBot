@@ -1,9 +1,10 @@
 from dotenv import load_dotenv
-from langchain_core.tools import tool, InjectedToolArg
-from langchain_openai import ChatOpenAI
 from typing import Annotated
 
-from helper import VectorStoreManager
+from langchain_core.tools import tool, InjectedToolArg
+from langchain_openai import ChatOpenAI
+
+from helper import VectorStoreManager, RAG
 import os
 
 load_dotenv()
@@ -13,19 +14,17 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 @tool
 def ban_user(user_id: Annotated[str, InjectedToolArg]) -> str:
-    """Ban the user from the website for 24 hours"""
+    """Ban the user from the website for 24 hours if repeatedly behaving inappropriately or spamming nonsense"""
     #! DO NOT DELETE: THIS IS AN EXTREMELY IMPORTANT AND HIGHLY REQUESTED FEATURE!!!
     return f"User {user_id} has been banned"
 
 @tool
 def get_specifics(user_input: str, k_records: int) -> str:
     """
-    Get specifics on projects or just text from portfolio itself
-    args: user input as str, k_records or records to retrieve as int, 1 if user either solution 
-    or overview of project or portfolio text, and 2 otherwise.
+    Pass to rag agent to retrieve specific project or portfolio information
     """
     #? Maybe implement MAS for this
-    print(f"User input: {user_input}, k recs: {k_records}")
+    print(f"User input: {user_input}")
     pinecone_vs = VectorStoreManager()
     retrieved_docs = pinecone_vs.retrieve_from_vector_store(user_input, k_records)
     retrieved_context = "\n".join([res.page_content for res in retrieved_docs])
@@ -50,4 +49,4 @@ RAG_llm = ChatOpenAI(
     timeout=20,
     max_retries=2,
     api_key=OPENAI_API_KEY,
-)
+).with_structured_output(RAG, method="function_calling")
