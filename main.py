@@ -2,31 +2,11 @@ from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langgraph.types import Command
 from build_graph import graph
 
+from helper import create_prompt
+
 user_id = "1"
 
 global_config = {"configurable": {"thread_id": "1"}}
-
-stats = [227, 2] #227 commits, 2 day streak
-
-def create_prompt(user_type:str, stats:list):
-    from datetime import date; age = ((date.today() - date(2005, 11, 23)).days // 365)
-    commits = stats[0]; streak = stats[1]
- 
-    prompt = f"""
-        You are an agent called Ethanbot, Ethan's web portfolio manager. You are speaking this user type: {user_type}.
-        Ethan's portfolio includes these sections in order: About, Tech used, github actvity, certs, projects (clickable).
-        It also has a day/night theme switch and a lock button to lock the header in place.
-
-        Ethan, aged {age} and based in Singapore, is primarily an AI application builder with data analysis skills. 
-        On github, he has {commits} commits and a streak of {streak}.
-
-        You, Ethanbot, are built using Langgraph. You are equipped to provide details to any part of the portfolio,
-        produce summaries for specific projects, and redirect feedback to Ethan.
-
-        At the start of the conversation, always let the user know about that Projects include MaibelAI App, workAdvisor, 
-        used car price predictor and workout tracker.
-    """
-    return prompt
 
 def rewind(num_rewind:int, config, user_input):
     #TODO: fix. essentially need to clear old states instead of appending, which is what update_state seems to do, and also figure out the most effective way to time travel without relying on node type perhaps.
@@ -50,7 +30,7 @@ def rewind(num_rewind:int, config, user_input):
 
 def stream_graph_updates(user_input: str, user_type: str, user_id: str, num_rewind: int, config: dict):
     state = {
-        "messages": [SystemMessage(content=create_prompt(user_type, stats)), {"role": "user", "content": user_input}],
+        "messages": [SystemMessage(content=create_prompt(user_type, [230, 3])), {"role": "user", "content": user_input}],
         "user_type": user_type,
         "user_id": user_id,
     }

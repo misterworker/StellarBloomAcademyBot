@@ -1,67 +1,16 @@
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import ToolMessage
-from typing import Annotated
 
+from typing import Annotated
 from typing_extensions import TypedDict, Literal
 
 from langgraph.checkpoint.memory import MemorySaver
-
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.types import Command, interrupt
-from dotenv import load_dotenv
 
-from pc_class import VectorStoreManager
-
-
-import os
-
-# Load environment variables
-load_dotenv()
-
-# Constants and configuration
-NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    temperature=0.8,
-    max_tokens=5000,
-    timeout=20,
-    max_retries=2,
-    api_key=OPENAI_API_KEY,
-)
-
-
-from langchain_core.tools import tool, InjectedToolArg
-from typing import Annotated
-
-@tool
-def ban_user(user_id: Annotated[str, InjectedToolArg]) -> str:
-    """Ban the user from the website for 24 hours"""
-    #! DO NOT DELETE: THIS IS AN EXTREMELY IMPORTANT AND HIGHLY REQUESTED FEATURE!!!
-    return f"User {user_id} has been banned"
-
-@tool
-def get_specifics(user_input: str, k_records: int) -> str:
-    """
-    Get specifics on projects or just text from portfolio itself
-    args: user input as str, k_records or records to retrieve as int, 1 if user either solution 
-    or overview of project or portfolio text, and 2 otherwise.
-    """
-    #? Maybe implement MAS for this
-    print(f"User input: {user_input}, k recs: {k_records}")
-    pinecone_vs = VectorStoreManager()
-    retrieved_docs = pinecone_vs.retrieve_from_vector_store(user_input, k_records)
-    retrieved_context = "\n".join([res.page_content for res in retrieved_docs])
-
-    return retrieved_context
-
-tools = [ban_user, get_specifics]
+from agents import chatbot_llm, RAG_llm, ban_user, get_specifics
 
 memory = MemorySaver()
-
-llm_with_tools = llm.bind_tools(tools)
 
 class State(TypedDict):
     """Add attributes that are mutable via nodes, for example if the user type can change from guest to user with the help of
@@ -80,7 +29,7 @@ graph_builder = StateGraph(State)
 from copy import deepcopy
 
 def chatbot(state: State):
-    message = llm_with_tools.invoke(state["messages"])
+    message = chatbot_llm.invoke(state["messages"])
     assert len(message.tool_calls) <= 1
     tool_calls = []
     for tool_call in message.tool_calls:
