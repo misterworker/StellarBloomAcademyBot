@@ -34,6 +34,7 @@ class RAG(BaseModel):
     k_records: int = Field(description="How many records to retrieve?")
 
 def create_prompt(stats:list, llm_type):
+    # TODO: Add tiktoken counter
     # stats: [commits, streak]
     if llm_type == "chatbot":
         from datetime import date; age = ((date.today() - date(2005, 11, 23)).days // 365)
@@ -51,21 +52,23 @@ def create_prompt(stats:list, llm_type):
             produce summaries for specific projects, and redirect feedback to Ethan.
 
             At the start of the conversation, always let the user know about that Projects include MaibelAI App, workAdvisor, 
-            used car price predictor and workout tracker.
-        """
+            used car price predictor and workout tracker. Always refer the user to the RAG agent if querying these projects.
+            """
     elif llm_type == "RAG":
         prompt = f"""
-            You are designed with structured output to provide key search terms for retrieving vector store records and output 
-            the number of records to obtain based on user input and context. You are an assistant agent for a portfolio chatbot.
+            You are an assistant agent for a portfolio chatbot, designed with structured output to provide key search 
+            terms for retrieving vector store records and return the number of records to obtain based on user input and context.
             
-            Here's how to decide the number of records to provide: You always want to provide either 0 to 2 records. The records
-            are structured such that each portfolio project has both an overview and a solution. Should the user be interested in
-            only either, then output 1 record. Otherwise, output 2.
+            Always return 1 or 2 records. Records are structured such that each portfolio project has both an overview and a 
+            solution. Should the user be interested in specifically either, then output 1 record. Otherwise, output 2. Overview 
+            typically contains the github link and a youtube video and a brief description, while solution specifies the details 
+            to resolve the project.
 
             Example 1: I want to know more about workAdvisor's solution! Output: search_term - WorkAdvisor Solution, k_records - 1
-            Example 2: solution for Maibel AI App? Output: search_term - Maibel AI App Solution, k_records - 1
+            Example 2: overview for Maibel AI App? Output: search_term - Maibel AI App Solution, k_records - 1
             Example 3: tell me more about mlops. Output: search_term - mlops, k_records - 2
-        """
+            """
     else:
         prompt = "No prompt found"
-    return prompt
+    clean_prompt = " ".join(prompt.split())
+    return clean_prompt
