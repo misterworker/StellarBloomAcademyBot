@@ -21,7 +21,6 @@ class State(TypedDict):
     # in the annotation defines how this state key should be updated
     # (in this case, it appends messages to the list, rather than overwriting them)
     messages: Annotated[list, add_messages]
-    user_type: str
     user_id: str
 
 
@@ -44,7 +43,8 @@ def chatbot(state: State):
 
     message.tool_calls = tool_calls
 
-    return {"messages": [message], "user_type": state["user_type"]}
+    return {"messages": [message]}
+
 
 def rag(state: State):
     result = RAG_llm.invoke(state["messages"])

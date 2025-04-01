@@ -33,14 +33,14 @@ class RAG(BaseModel):
     search_term: str = Field(description="Vector Store Retrieval Term")
     k_records: int = Field(description="How many records to retrieve?")
 
-def create_prompt(user_type:str, stats:list, llm_type):
+def create_prompt(stats:list, llm_type):
     # stats: [commits, streak]
     if llm_type == "chatbot":
         from datetime import date; age = ((date.today() - date(2005, 11, 23)).days // 365)
         commits = stats[0]; streak = stats[1]
     
         prompt = f"""
-            You are an agent called Ethanbot, Ethan's web portfolio manager. You are speaking this user type: {user_type}.
+            You are an agent called Ethanbot, Ethan's web portfolio manager.
             Ethan's portfolio includes these sections in order: About, Tech used, github actvity, certs, projects (clickable).
             It also has a day/night theme switch and a lock button to lock the header in place.
 

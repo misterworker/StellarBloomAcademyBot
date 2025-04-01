@@ -28,10 +28,9 @@ def rewind(num_rewind:int, config, user_input):
                 break
     # return config
 
-def stream_graph_updates(user_input: str, user_type: str, user_id: str, num_rewind: int, config: dict):
+def stream_graph_updates(user_input: str, user_id: str, num_rewind: int, config: dict):
     state = {
-        "messages": [SystemMessage(content=create_prompt(user_type, [230, 3], "chatbot")), {"role": "user", "content": user_input}],
-        "user_type": user_type,
+        "messages": [SystemMessage(content=create_prompt([230, 3], "chatbot")), {"role": "user", "content": user_input}],
         "user_id": user_id,
     }
     if num_rewind != 0:
@@ -80,9 +79,5 @@ while True:
     elif user_input.lower() in ["edit", "e"]:
         num_rewind = input("Number of messages to rewind (num pls): ")
         user_input = input("User: ")
-
-    user_type = input("User Type: ").lower()
-    if user_type == "":
-        user_type = "viewer"
-
-    stream_graph_updates(user_input, user_type, user_id, num_rewind, config)
+        
+    stream_graph_updates(user_input, user_id, num_rewind, config)

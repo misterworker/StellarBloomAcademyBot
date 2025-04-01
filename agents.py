@@ -28,7 +28,7 @@ def get_specifics() -> str:
     """    
     return Command(
         goto="rag",
-        update={"messages": SystemMessage(create_prompt("", [], "RAG"))},
+        update={"messages": SystemMessage(create_prompt(stats=[], llm_type="RAG"))},
         # graph=Command.PARENT, #specify which graph to goto, defaults to current
     )
 
