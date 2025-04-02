@@ -1,7 +1,6 @@
 import requests
 import time
 
-# API URL for your FastAPI application
 API_URL = "http://127.0.0.1:8000"
 
 def chat_with_bot(user_input: str, fingerprint: str, num_rewind: int = 0):
@@ -12,7 +11,6 @@ def chat_with_bot(user_input: str, fingerprint: str, num_rewind: int = 0):
         "num_rewind": num_rewind
     }
 
-    # Sending the chat input to the FastAPI app
     response = requests.post(f"{API_URL}/chat", json=payload)
     
     if response.status_code == 200:
@@ -29,12 +27,11 @@ def chat_with_bot(user_input: str, fingerprint: str, num_rewind: int = 0):
         print("Error:", response.status_code, response.text)
         return False
 
-def resume_conversation(fingerprint: str, user_input: str):
+def resume_conversation(fingerprint: str, action: bool):
     """Resume the conversation if paused for user input."""
     payload = {
-        "user_input": user_input,
+        "action": action,
         "fingerprint": fingerprint,
-        "num_rewind": 0
     }
 
     # Sending the resume decision to the FastAPI app
@@ -66,5 +63,5 @@ def interact_with_chatbot():
         # Check if the conversation has resumed or is done
         conversation_active = chat_with_bot("continue", fingerprint)
 
-if __name__ == "__main__":
+while True:
     interact_with_chatbot()

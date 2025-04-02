@@ -46,6 +46,7 @@ def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: int, con
             return {"response": msg, "other": None}
     
 def resume_graph_updates(action, config):
+     msg = ""
      for resume_event in graph.stream(Command(resume={"action": action}), config):
         try:
             is_chatbot = resume_event.get("chatbot", False)
