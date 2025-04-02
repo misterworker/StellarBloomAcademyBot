@@ -3,36 +3,15 @@ from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langgraph.types import Command
 
 from build_graph import graph
-from helper import create_prompt
+from helper import create_prompt, rewind
 
-user_id = "1"
+fingerprint = "123"
+global_config = {"configurable": {"thread_id": fingerprint}}
 
-global_config = {"configurable": {"thread_id": "1"}}
-
-def rewind(num_rewind:int, config, user_input):
-    #TODO: fix. essentially need to clear old states instead of appending, which is what update_state seems to do, and also figure out the most effective way to time travel without relying on node type perhaps.
-    #? Alternatively, this could also be ignored and we can provide our own logic of checkpoint ids and just use these ids.
-    global graph
-    num_encountered = 0
-    for state in graph.get_state_history(config):
-        if "chatbot" in state.next:
-            num_encountered+=1
-            if num_rewind == num_encountered:
-                config = state.config
-                last_message = state.values["messages"][-1]
-                print("last message: ", last_message)
-                new_message = HumanMessage(
-                    content=user_input,
-                    id=last_message.id
-                )
-                graph.update_state(config, {"messages": [new_message]})
-                break
-    # return config
-
-def stream_graph_updates(user_input: str, user_id: str, num_rewind: int, config: dict):
+def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: int, config: dict):
     state = {
         "messages": [SystemMessage(content=create_prompt([230, 3], "chatbot")), {"role": "user", "content": user_input}],
-        "user_id": user_id,
+        "fingerprint": fingerprint,
     }
     if num_rewind != 0:
         rewind(int(num_rewind), config, user_input)
@@ -83,4 +62,4 @@ while True:
         num_rewind = input("Number of messages to rewind (num pls): ")
         user_input = input("User: ")
         
-    stream_graph_updates(user_input, user_id, num_rewind, config)
+    stream_graph_updates(user_input, fingerprint, num_rewind, config)

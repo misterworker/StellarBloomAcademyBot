@@ -21,7 +21,7 @@ class State(TypedDict):
     # in the annotation defines how this state key should be updated
     # (in this case, it appends messages to the list, rather than overwriting them)
     messages: Annotated[list, add_messages]
-    user_id: str
+    fingerprint: str
 
 
 graph_builder = StateGraph(State)
@@ -36,7 +36,7 @@ def chatbot(state: State):
     for tool_call in message.tool_calls:
         if tool_call["name"] == "suspend_user":
             tool_call_copy = deepcopy(tool_call)
-            tool_call_copy["args"]["user_id"] = state["user_id"]
+            tool_call_copy["args"]["fingerprint"] = state["fingerprint"]
             tool_calls.append(tool_call_copy)
         else:
             tool_calls.append(tool_call)

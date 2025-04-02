@@ -16,9 +16,10 @@ NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 @tool
-def suspend_user(user_id: Annotated[str, InjectedToolArg]) -> str:
+def suspend_user(fingerprint: Annotated[str, InjectedToolArg]) -> str:
     """Temporarily suspend user that sends any inappropriate, unsafe or spam messages."""
-    return f"User {user_id} has been suspended"
+    # Only banned during runtime at the moment
+    return f"blud got suspended"
 
 @tool
 def get_specifics() -> str:

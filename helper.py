@@ -2,9 +2,11 @@ from dotenv import load_dotenv
 from pinecone import Pinecone
 from pydantic import BaseModel, Field
 
+from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 
+from build_graph import graph
 import os
 
 load_dotenv()
@@ -73,3 +75,22 @@ def create_prompt(stats:list, llm_type):
         prompt = "No prompt found"
     clean_prompt = " ".join(prompt.split())
     return clean_prompt
+
+def rewind(num_rewind:int, config, user_input):
+    #TODO: fix. essentially need to clear old states instead of appending, which is what update_state seems to do, and also figure out the most effective way to time travel without relying on node type perhaps.
+    #? Alternatively, this could also be ignored and we can provide our own logic of checkpoint ids and just use these ids.
+    num_encountered = 0
+    for state in graph.get_state_history(config):
+        if "chatbot" in state.next:
+            num_encountered+=1
+            if num_rewind == num_encountered:
+                config = state.config
+                last_message = state.values["messages"][-1]
+                print("last message: ", last_message)
+                new_message = HumanMessage(
+                    content=user_input,
+                    id=last_message.id
+                )
+                graph.update_state(config, {"messages": [new_message]})
+                break
+    # return config
