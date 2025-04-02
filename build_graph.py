@@ -84,16 +84,15 @@ def human_review_node(state) -> Command[Literal["chatbot", "tools"]]:
     review_data = human_review.get("data")
 
     # if approved, call the tool
-    if review_action == "continue":
+    if review_action:
         return Command(goto="tools")
-    else:
-        tool_message = ToolMessage(
-            role="tool",
-            name=tool_call["name"],
-            tool_call_id=tool_call["id"],
-            content="Tool execution skipped.",
-        )
-        return Command(goto="chatbot", update={"messages": [tool_message]})
+    tool_message = ToolMessage(
+        role="tool",
+        name=tool_call["name"],
+        tool_call_id=tool_call["id"],
+        content="Tool execution skipped.",
+    )
+    return Command(goto="chatbot", update={"messages": [tool_message]})
     
 def tool_node(state):
     new_messages = []
