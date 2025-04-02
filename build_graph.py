@@ -8,7 +8,7 @@ from langgraph.types import Command, interrupt
 from typing import Annotated
 from typing_extensions import TypedDict, Literal
 
-from agents import chatbot_llm, RAG_llm, ban_user, get_specifics
+from agents import chatbot_llm, RAG_llm, suspend_user, get_specifics
 from helper import VectorStoreManager
 
 memory = MemorySaver()
@@ -34,7 +34,7 @@ def chatbot(state: State):
     assert len(message.tool_calls) <= 1
     tool_calls = []
     for tool_call in message.tool_calls:
-        if tool_call["name"] == "ban_user":
+        if tool_call["name"] == "suspend_user":
             tool_call_copy = deepcopy(tool_call)
             tool_call_copy["args"]["user_id"] = state["user_id"]
             tool_calls.append(tool_call_copy)
@@ -58,9 +58,13 @@ def rag(state: State):
     return {"messages": [retrieved_context]}
 
 #* Tool related nodes
-def route_after_llm(state) -> Literal[END, "human_review_node"]:
-    if len(state["messages"][-1].tool_calls) == 0:
+def route_after_llm(state) -> Literal[END, "human_review_node", "tools"]:
+    tools = state["messages"][-1].tool_calls
+    if len(tools) == 0:
         return END
+    elif tools[0].get("name", "") in ["suspend_user"]:
+        # Automatically suspend user
+        return "tools"
     return "human_review_node"
         
 def human_review_node(state) -> Command[Literal["chatbot", "tools"]]:
@@ -93,7 +97,7 @@ def human_review_node(state) -> Command[Literal["chatbot", "tools"]]:
     
 def tool_node(state):
     new_messages = []
-    tools = {"ban_user": ban_user, "get_specifics": get_specifics}
+    tools = {"suspend_user": suspend_user, "get_specifics": get_specifics}
     tool_calls = state["messages"][-1].tool_calls
     for tool_call in tool_calls:
         tool = tools[tool_call["name"]]

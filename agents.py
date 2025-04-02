@@ -16,10 +16,9 @@ NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 @tool
-def ban_user(user_id: Annotated[str, InjectedToolArg]) -> str:
-    """Ban the user from the website for 24 hours if repeatedly behaving inappropriately or spamming nonsense"""
-    #! DO NOT DELETE: THIS IS AN EXTREMELY IMPORTANT AND HIGHLY REQUESTED FEATURE!!!
-    return f"User {user_id} has been banned"
+def suspend_user(user_id: Annotated[str, InjectedToolArg]) -> str:
+    """Temporarily suspend user that sends any inappropriate, unsafe or spam messages."""
+    return f"User {user_id} has been suspended"
 
 @tool
 def get_specifics() -> str:
@@ -32,7 +31,7 @@ def get_specifics() -> str:
         # graph=Command.PARENT, #specify which graph to goto, defaults to current
     )
 
-tools = [ban_user, get_specifics]
+tools = [suspend_user, get_specifics]
 
 chatbot_llm = ChatOpenAI(
     model="gpt-4o-mini", #! switch to gpt 4o in prod

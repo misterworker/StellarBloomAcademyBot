@@ -1,3 +1,4 @@
+# from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langgraph.types import Command
 
@@ -37,7 +38,6 @@ def stream_graph_updates(user_input: str, user_id: str, num_rewind: int, config:
         rewind(int(num_rewind), config, user_input)
     for event in graph.stream(state, config):
         if "__interrupt__" in event:
-            
             action = input("continue or no: ")
             for resume_event in graph.stream(Command(resume={"action": action}), config):
                 try:
@@ -55,9 +55,12 @@ def stream_graph_updates(user_input: str, user_id: str, num_rewind: int, config:
                     if msg:
                         print("ASSISTANT:", msg, "\n")
 
-        else:
+        elif "tools" in event:
+            # For tools that don't require human review
+            pass
+
+        elif "chatbot" in event:
             for value in event.values():
-                # print("Value: ", value)
                 msg = value["messages"][-1].content
                 if msg:
                     print("ASSISTANT:", msg, "\n")
