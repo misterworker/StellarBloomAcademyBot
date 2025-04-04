@@ -77,7 +77,6 @@ def human_review_node(state) -> Command[Literal["chatbot", "tools"]]:
     )
 
     review_action = human_review["action"]
-    review_data = human_review.get("data")
 
     # if approved, call the tool
     if review_action:
@@ -97,7 +96,6 @@ async def tool_node(state):
     for tool_call in tool_calls:
         tool = tools[tool_call["name"]]
         result = await tool.ainvoke(tool_call["args"])
-        print("result: ", result)
         new_messages.append(
             {
                 "role": "tool",
