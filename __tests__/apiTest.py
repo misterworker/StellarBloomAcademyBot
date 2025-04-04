@@ -45,7 +45,7 @@ def resume_conversation(fingerprint: str, action: bool):
 
 def interact_with_chatbot():
     """Interact with the chatbot through the FastAPI API."""
-    fingerprint = "123"
+    fingerprint = "3"
     user_input = input("You: ")
 
     conversation_active = chat_with_bot(user_input, fingerprint)

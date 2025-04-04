@@ -1,27 +1,21 @@
-from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from psycopg_pool import AsyncConnectionPool
 
 from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.types import Command
 
-from build_graph import compile
+from build_graph import graph_builder
 from helper import create_prompt
 
-graph = None
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global graph
-    """Ensure the graph is compiled once when FastAPI starts."""
-    graph = await compile()
-    print("Graph compiled successfully!")
-    yield
-
-app = FastAPI(lifespan=lifespan)
+import os
 
 load_dotenv()
+DB_URI = os.getenv("DB_URI_LOCAL")
+
+app = FastAPI()
 
 class UserInput(BaseModel):
     user_input: str
@@ -33,48 +27,82 @@ class ResumeInput(BaseModel):
     fingerprint: str
 
 async def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: int, config: dict):
-    state = {
-        "messages": [SystemMessage(content=create_prompt([230, 3], "chatbot")), {"role": "user", "content": user_input}],
-        "fingerprint": fingerprint,
-    }
-    if num_rewind != 0:
-        rewind(int(num_rewind), config, user_input)
-    async for event in graph.astream(state, config):
-        print("event: ", event)
-        msg = ""
-        if "__interrupt__" in event:
-            return {"response":"", "other":"interrupt"}
+    async with AsyncConnectionPool(
+        # Example configuration
+        conninfo=DB_URI,
+        max_size=5,
+        kwargs={"autocommit": True, "prepare_threshold": 0},
+    ) as pool:
+        checkpointer = AsyncPostgresSaver(pool)
+        # await checkpointer.setup()
 
-        elif "tools" in event:
-            # For tools that don't require human review
+        graph = graph_builder.compile(checkpointer=checkpointer)
+        
+        try:
+            with open("graph_output.png", "wb") as f:
+                f.write(graph.get_graph().draw_mermaid_png())
+        except Exception:
+            # This requires some extra dependencies and is optional
             pass
 
-        elif "chatbot" in event:
-            for value in event.values():
-                msg = value["messages"][-1].content
-                if msg:
-                    print("ASSISTANT:", msg, "\n")
+        state = {
+            "messages": [SystemMessage(content=create_prompt([230, 3], "chatbot")), {"role": "user", "content": user_input}],
+            "fingerprint": fingerprint,
+        }
+        if num_rewind != 0:
+            rewind(int(num_rewind), config, user_input)
+        async for event in graph.astream(state, config):
+            print("event: ", event)
+            msg = ""
+            if "__interrupt__" in event:
+                return {"response":"", "other":"interrupt"}
 
-        if msg:
-            return {"response": msg, "other": None}
+            elif "tools" in event:
+                # For tools that don't require human review
+                pass
+
+            elif "chatbot" in event:
+                for value in event.values():
+                    msg = value["messages"][-1].content
+                    if msg:
+                        print("ASSISTANT:", msg, "\n")
+
+            if msg:
+                return {"response": msg, "other": None}
     
 async def resume_graph_updates(action, config):
-     msg = ""
-     async for resume_event in graph.astream(Command(resume={"action": action}), config):
-        try:
-            is_chatbot = resume_event.get("chatbot", False)
-            is_rag = resume_event.get("rag", False)
-        except:
-            is_chatbot = False
-            is_rag = False
-        if is_chatbot:
-            msg = resume_event["chatbot"]["messages"][-1].content
-        elif is_rag:
-            msg = resume_event["rag"]["messages"][-1]
-            
-        if msg:
-            print("ASSISTANT:", msg, "\n")
-            return {"response": msg, "other": None}
+    async with AsyncConnectionPool(
+        # Example configuration
+        conninfo=DB_URI,
+        max_size=5,
+        kwargs={"autocommit": True, "prepare_threshold": 0},
+    ) as pool:
+        checkpointer = AsyncPostgresSaver(pool)
+
+        graph = graph_builder.compile(checkpointer=checkpointer)
+        
+        # try:
+        #     with open("graph_output.png", "wb") as f:
+        #         f.write(graph.get_graph().draw_mermaid_png())
+        # except Exception:
+        #     # This requires some extra dependencies and is optional
+        #     pass
+        msg = ""
+        async for resume_event in graph.astream(Command(resume={"action": action}), config):
+            try:
+                is_chatbot = resume_event.get("chatbot", False)
+                is_rag = resume_event.get("rag", False)
+            except:
+                is_chatbot = False
+                is_rag = False
+            if is_chatbot:
+                msg = resume_event["chatbot"]["messages"][-1].content
+            elif is_rag:
+                msg = resume_event["rag"]["messages"][-1]
+                
+            if msg:
+                print("ASSISTANT:", msg, "\n")
+                return {"response": msg, "other": None}
         
 def rewind(num_rewind:int, config, user_input):
     #TODO: fix. essentially need to clear old states instead of appending, which is what update_state seems to do, and also figure out the most effective way to time travel without relying on node type perhaps.
@@ -105,7 +133,7 @@ async def resume_process(input: ResumeInput):
         if not fingerprint:
             raise HTTPException(status_code=400, detail="Fingerprint is required.")
         config = {"configurable": {"thread_id": fingerprint}}
-        result = resume_graph_updates(action, config)
+        result = await resume_graph_updates(action, config)
         return result
 
     except Exception as e:

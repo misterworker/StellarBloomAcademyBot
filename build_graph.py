@@ -1,20 +1,14 @@
 from langchain_core.messages import ToolMessage
 
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.types import Command, interrupt
 
-from psycopg_pool import AsyncConnectionPool
 from typing import Annotated
 from typing_extensions import TypedDict, Literal
 
 from agents import chatbot_llm, RAG_llm, suspend_user, get_specifics
 from helper import VectorStoreManager
-
-import os
-
-DB_URI = os.getenv("DB_URI_LOCAL")
 
 class State(TypedDict):
     """Add attributes that are mutable via nodes, for example if the user type can change from guest to user with the help of
@@ -123,39 +117,20 @@ def route_after_tool(state) -> Literal["rag", "chatbot"]:
     
     return "chatbot"
 
-async def compile():
-    async with AsyncConnectionPool(
-        # Example configuration
-        conninfo=DB_URI,
-        max_size=5,
-        kwargs={"autocommit": True, "prepare_threshold": 0},
-    ) as pool:
-        checkpointer = AsyncPostgresSaver(pool)
-        await checkpointer.setup()
-        graph_builder.add_node("chatbot", chatbot)
-        graph_builder.add_node("tools", tool_node)
-        graph_builder.add_node("rag", rag)
-        graph_builder.add_node(human_review_node)
+graph_builder.add_node("chatbot", chatbot)
+graph_builder.add_node("tools", tool_node)
+graph_builder.add_node("rag", rag)
+graph_builder.add_node(human_review_node)
 
-        graph_builder.add_edge(START, "chatbot")
-        graph_builder.add_conditional_edges(
-            "chatbot",
-            route_after_llm,
-        )
-        # graph_builder.add_edge("tools", "chatbot")
-        graph_builder.add_conditional_edges(
-            "tools",
-            route_after_tool,
-        )
-        graph_builder.add_edge("rag", END)
-
-        graph = graph_builder.compile(checkpointer=checkpointer)
-        
-        try:
-            with open("graph_output.png", "wb") as f:
-                f.write(graph.get_graph().draw_mermaid_png())
-        except Exception:
-            # This requires some extra dependencies and is optional
-            pass
-        return graph
+graph_builder.add_edge(START, "chatbot")
+graph_builder.add_conditional_edges(
+    "chatbot",
+    route_after_llm,
+)
+# graph_builder.add_edge("tools", "chatbot")
+graph_builder.add_conditional_edges(
+    "tools",
+    route_after_tool,
+)
+graph_builder.add_edge("rag", END)
     
