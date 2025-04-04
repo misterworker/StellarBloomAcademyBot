@@ -1,4 +1,3 @@
-from dotenv import load_dotenv
 from typing import Annotated
 
 from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
@@ -10,11 +9,12 @@ from langgraph.types import Command, interrupt
 from helper import create_prompt, RAG
 import os
 
-load_dotenv()
-
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+#TODO: Feedback to Ethan
+#TODO: Parse website content as pdf/docx and provide as downloadable content
+#TODO: Update prompt to prevent more than 1 tool call
 @tool
 def suspend_user(fingerprint: Annotated[str, InjectedToolArg]) -> str:
     """Temporarily suspend user that sends any inappropriate, unsafe or spam messages."""

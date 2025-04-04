@@ -1,14 +1,27 @@
+from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langgraph.types import Command
 
-from build_graph import graph
+from build_graph import compile
 from helper import create_prompt
 
-app = FastAPI()
+graph = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global graph
+    """Ensure the graph is compiled once when FastAPI starts."""
+    graph = await compile()
+    print("Graph compiled successfully!")
+    yield
+
+app = FastAPI(lifespan=lifespan)
+
+load_dotenv()
 
 class UserInput(BaseModel):
     user_input: str
@@ -19,14 +32,14 @@ class ResumeInput(BaseModel):
     action: bool
     fingerprint: str
 
-def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: int, config: dict):
+async def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: int, config: dict):
     state = {
         "messages": [SystemMessage(content=create_prompt([230, 3], "chatbot")), {"role": "user", "content": user_input}],
         "fingerprint": fingerprint,
     }
     if num_rewind != 0:
         rewind(int(num_rewind), config, user_input)
-    for event in graph.stream(state, config):
+    async for event in graph.astream(state, config):
         print("event: ", event)
         msg = ""
         if "__interrupt__" in event:
@@ -45,9 +58,9 @@ def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: int, con
         if msg:
             return {"response": msg, "other": None}
     
-def resume_graph_updates(action, config):
+async def resume_graph_updates(action, config):
      msg = ""
-     for resume_event in graph.stream(Command(resume={"action": action}), config):
+     async for resume_event in graph.astream(Command(resume={"action": action}), config):
         try:
             is_chatbot = resume_event.get("chatbot", False)
             is_rag = resume_event.get("rag", False)
@@ -108,7 +121,7 @@ async def chat(input: UserInput):
             raise HTTPException(status_code=400, detail="Fingerprint is required.")
         config = {"configurable": {"thread_id": fingerprint}}
         
-        result = stream_graph_updates(user_input, fingerprint, num_rewind, config)
+        result = await stream_graph_updates(user_input, fingerprint, num_rewind, config)
         print("result: ", result)
         return result
 

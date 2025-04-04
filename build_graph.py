@@ -1,17 +1,20 @@
 from langchain_core.messages import ToolMessage
 
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.types import Command, interrupt
 
+from psycopg_pool import AsyncConnectionPool
 from typing import Annotated
 from typing_extensions import TypedDict, Literal
 
 from agents import chatbot_llm, RAG_llm, suspend_user, get_specifics
 from helper import VectorStoreManager
 
-memory = MemorySaver()
+import os
+
+DB_URI = os.getenv("DB_URI_LOCAL")
 
 class State(TypedDict):
     """Add attributes that are mutable via nodes, for example if the user type can change from guest to user with the help of
@@ -29,8 +32,8 @@ graph_builder = StateGraph(State)
 from copy import deepcopy
 
 #* Agent Nodes
-def chatbot(state: State):
-    message = chatbot_llm.invoke(state["messages"])
+async def chatbot(state: State):
+    message = await chatbot_llm.ainvoke(state["messages"])
     assert len(message.tool_calls) <= 1
     tool_calls = []
     for tool_call in message.tool_calls:
@@ -45,9 +48,8 @@ def chatbot(state: State):
 
     return {"messages": [message]}
 
-
-def rag(state: State):
-    result = RAG_llm.invoke(state["messages"])
+async def rag(state: State):
+    result = await RAG_llm.ainvoke(state["messages"])
     print("rag result: ", result)
     search_term = result.search_term
     k_records = result.k_records
@@ -94,13 +96,13 @@ def human_review_node(state) -> Command[Literal["chatbot", "tools"]]:
     )
     return Command(goto="chatbot", update={"messages": [tool_message]})
     
-def tool_node(state):
+async def tool_node(state):
     new_messages = []
     tools = {"suspend_user": suspend_user, "get_specifics": get_specifics}
     tool_calls = state["messages"][-1].tool_calls
     for tool_call in tool_calls:
         tool = tools[tool_call["name"]]
-        result = tool.invoke(tool_call["args"])
+        result = await tool.ainvoke(tool_call["args"])
         print("result: ", result)
         new_messages.append(
             {
@@ -121,29 +123,39 @@ def route_after_tool(state) -> Literal["rag", "chatbot"]:
     
     return "chatbot"
 
-graph_builder.add_node("chatbot", chatbot)
-graph_builder.add_node("tools", tool_node)
-graph_builder.add_node("rag", rag)
-graph_builder.add_node(human_review_node)
+async def compile():
+    async with AsyncConnectionPool(
+        # Example configuration
+        conninfo=DB_URI,
+        max_size=5,
+        kwargs={"autocommit": True, "prepare_threshold": 0},
+    ) as pool:
+        checkpointer = AsyncPostgresSaver(pool)
+        await checkpointer.setup()
+        graph_builder.add_node("chatbot", chatbot)
+        graph_builder.add_node("tools", tool_node)
+        graph_builder.add_node("rag", rag)
+        graph_builder.add_node(human_review_node)
 
-graph_builder.add_edge(START, "chatbot")
-graph_builder.add_conditional_edges(
-    "chatbot",
-    route_after_llm,
-)
-# graph_builder.add_edge("tools", "chatbot")
-graph_builder.add_conditional_edges(
-    "tools",
-    route_after_tool,
-)
-graph_builder.add_edge("rag", END)
+        graph_builder.add_edge(START, "chatbot")
+        graph_builder.add_conditional_edges(
+            "chatbot",
+            route_after_llm,
+        )
+        # graph_builder.add_edge("tools", "chatbot")
+        graph_builder.add_conditional_edges(
+            "tools",
+            route_after_tool,
+        )
+        graph_builder.add_edge("rag", END)
 
-graph = graph_builder.compile(checkpointer=memory)
-
-try:
-    with open("graph_output.png", "wb") as f:
-        f.write(graph.get_graph().draw_mermaid_png())
-except Exception:
-    # This requires some extra dependencies and is optional
-    pass
+        graph = graph_builder.compile(checkpointer=checkpointer)
+        
+        try:
+            with open("graph_output.png", "wb") as f:
+                f.write(graph.get_graph().draw_mermaid_png())
+        except Exception:
+            # This requires some extra dependencies and is optional
+            pass
+        return graph
     
