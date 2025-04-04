@@ -17,11 +17,12 @@ load_dotenv()
 DB_URI = os.getenv("DB_URI_LOCAL")
 
 graph = None
+pool = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Keep the connection pool open as long as the app is alive."""
-    global graph
+    global graph, pool
     pool = AsyncConnectionPool(
         conninfo=DB_URI,
         max_size=5,
@@ -53,6 +54,9 @@ class UserInput(BaseModel):
 
 class ResumeInput(BaseModel):
     action: bool
+    fingerprint: str
+
+class WipeInput(BaseModel):
     fingerprint: str
 
 async def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: int, config: dict):
@@ -95,7 +99,24 @@ async def resume_graph_updates(action, config):
         if msg:
             return {"response": msg, "other": None}
         
-        
+async def clear_thread(thread_id: str):
+    """Deletes all records related to the given thread_id."""
+    async with pool.connection() as conn:
+        async with conn.cursor() as cursor:
+            try:
+                await cursor.execute("DELETE FROM checkpoints WHERE thread_id = %s", (thread_id,))
+                await cursor.execute("DELETE FROM checkpoint_writes WHERE thread_id = %s", (thread_id,))
+                await cursor.execute("DELETE FROM checkpoint_blobs WHERE thread_id = %s", (thread_id,))
+
+                await conn.commit()
+                print(f"✅ Wiped data for thread_id: {thread_id}")
+                return {"response": True, "other": None}
+
+            except Exception as exception:
+                await conn.rollback()
+                print(f"❌ Error in wipe(): {exception}")
+                return {"response": False, "other": None}
+
 def rewind(num_rewind:int, config, user_input):
     #TODO: fix. essentially need to clear old states instead of appending, which is what update_state seems to do, and also figure out the most effective way to time travel without relying on node type perhaps.
     #? Alternatively, this could also be ignored and we can provide our own logic of checkpoint ids and just use these ids.
@@ -148,3 +169,18 @@ async def chat(input: UserInput):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/wipe")
+# Should be used to wipe history when user leaves site or wants to
+async def wipe(input: WipeInput):
+    try:
+        fingerprint = input.fingerprint
+        if not fingerprint:
+            raise HTTPException(status_code=400, detail="Fingerprint is required.")
+        result = await clear_thread(fingerprint)
+        print("wipe result: ", result)
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    

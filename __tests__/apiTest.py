@@ -43,10 +43,24 @@ def resume_conversation(fingerprint: str, action: bool):
     else:
         print("Error:", response.status_code, response.text)
 
+def wipe_thread(fingerprint: str):
+    payload = {
+        "fingerprint": fingerprint,
+    }
+    response = requests.post(f"{API_URL}/wipe", json=payload)
+    if response.status_code == 200:
+        data = response.json()
+        print("ASSISTANT:", data.get("response", "No message from assistant"))
+    else:
+        print("Error:", response.status_code, response.text)
+
 def interact_with_chatbot():
     """Interact with the chatbot through the FastAPI API."""
     fingerprint = "1"
-    user_input = input("You: ")
+    user_input = input("You (w to wipe thread): ")
+    if user_input == "w":
+        wipe_thread(fingerprint)
+        return
 
     conversation_active = chat_with_bot(user_input, fingerprint)
 
