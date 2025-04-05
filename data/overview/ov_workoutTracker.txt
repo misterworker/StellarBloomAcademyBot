@@ -4,6 +4,7 @@ An Android mobile application developed for fitness lovers - Designed for an int
 your workouts and analysing your progress metrics. Developed Solo.
 Features: Theme Switching, Authentication with Firebase, CRUD functions for History, Workouts and Exercises, Premium features, 
 and Data Visualisations
+
 Technologies used: Android Studio, Kotlin, Firebase, Google Cloud Run, Google Play Developer APIs
 Github: https://github.com/misterworker/WorkoutTracker
 Video: https://youtu.be/wrNX9XlC3xw

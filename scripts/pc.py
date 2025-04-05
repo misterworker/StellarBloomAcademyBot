@@ -16,6 +16,12 @@ index_name = "portfolio"
 existing_indexes = [index_info["name"] for index_info in pc.list_indexes()]
 print("Existing Indexes: ", existing_indexes)
 
+# if index_name in existing_indexes:
+#     pc.delete_index(
+#         name=index_name
+#     )
+# pc.delete_collection # Delete entire Portfolio collection
+
 if index_name not in existing_indexes:
     pc.create_index(
         name=index_name,
@@ -33,12 +39,11 @@ overview = "C:/Users/ethan/Documents/General/Portfolio-Bot/data/overview"
 solution = "C:/Users/ethan/Documents/General/Portfolio-Bot/data/solution"
 overview_proj = ["ov_maibel_app", "ov_mlops", "ov_workAdvisor", "ov_workoutTracker"]
 solution_proj = ["sl_maibel_app", "sl_mlops", "sl_workAdvisor", "sl_workoutTracker"]
-main_portfolio = "C:/Users/ethan/Documents/General/Portfolio-Bot/data/"
+# main_portfolio = "C:/Users/ethan/Documents/General/Portfolio-Bot/data/"
 
 FILE_PATHS = [
     f"{overview}/{proj}.txt" for proj in overview_proj
 ]
-FILE_PATHS.append(main_portfolio)
 FILE_PATHS.extend([f"{solution}/{proj}.txt" for proj in solution_proj])
 
 print("File Paths: ", FILE_PATHS[:3])

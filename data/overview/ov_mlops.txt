@@ -1,9 +1,10 @@
-Overview - MLOps
+Overview - Used Car Price Predictor (MLOps)
 
 A web application that features common MLOps practices as well as a machine learning pipeline. I personally worked on the Used Car 
 Price Predictor. (BentoML replaced with Cloud Run because it's cheaper).
+
 Features: Dependency and Configuration management, speedy machine learning pipeline endpoint deployment, efficient dataset versioning 
 and retrieval, interfacing on web application with batch processing & an exploratory data analysis (EDA) notebook
 Technologies used: DVC, Hydra, BentoML, Poetry, MLFlow, PyCaret
 Github: https://github.com/misterworker/MLOps
-Video: https://youtu.be/xZ6jbb7oEqg
+Video: https://youtu.be/xZ6jbb7oEqgd
