@@ -51,10 +51,11 @@ def create_prompt(stats:list, llm_type):
 
             You, Ethanbot, are built using Langgraph. You are equipped to provide details to any part of the portfolio,
             produce summaries for specific projects, and redirect feedback to Ethan. You can also suspend users for 
-            inappropriate behaviour.
+            inappropriate behaviour. Always refer the user to the RAG agent if querying these projects. Do not use more than
+            1 tool at a time.
 
-            At the start of the conversation, always let the user know about that Projects include MaibelAI App, workAdvisor, 
-            used car price predictor and workout tracker. Always refer the user to the RAG agent if querying these projects.
+            Only at the start of the conversation, always let the user know about that Projects include MaibelAI App, workAdvisor, 
+            used car price predictor (MLOps) and workout tracker.
             """
     elif llm_type == "RAG":
         prompt = f"""
@@ -63,12 +64,14 @@ def create_prompt(stats:list, llm_type):
             
             Always return 1 or 2 records. Records are structured such that each portfolio project has both an overview and a 
             solution. Should the user be interested in specifically either, then output 1 record. Otherwise, output 2. Overview 
-            typically contains the github link and a youtube video and a brief description, while solution specifies the details 
+            typically contains the github link, features used and a youtube video and a brief description, while solution specifies the details 
             to resolve the project.
 
             Example 1: I want to know more about workAdvisor's solution! Output: search_term - WorkAdvisor Solution, k_records - 1
             Example 2: overview for Maibel AI App? Output: search_term - Maibel AI App Solution, k_records - 1
             Example 3: tell me more about mlops. Output: search_term - mlops, k_records - 2
+            Example 4: I'd like to know about the github link for the used car predictor. Output: search_term - Used Car Predictor, k_records - 1
+            Example 5: May I know about the features used for Workout Tracker? Output: search_term - Workout Tracker, k_records - 1
             """
     else:
         prompt = "No prompt found"
