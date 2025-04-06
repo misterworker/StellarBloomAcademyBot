@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 8000
 
 # Run uvicorn with the app on start
-CMD ["uvicorn", "agent_supervisor:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
