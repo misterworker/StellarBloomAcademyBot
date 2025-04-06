@@ -21,7 +21,7 @@ def chat_with_bot(user_input: str, fingerprint: str, num_rewind: int = 0):
             print("Human Review Time!")
             return True
         else:
-            print("ASSISTANT:", response)
+            print("ASSISTANT CHAT:", response)
             return False
     else:
         print("Error:", response.status_code, response.text)
@@ -39,7 +39,7 @@ def resume_conversation(fingerprint: str, action: bool):
     
     if response.status_code == 200:
         data = response.json()
-        print("ASSISTANT:", data.get("response", "No message from assistant"))
+        print("ASSISTANT RESUME:", data.get("response", "No message from assistant"))
     else:
         print("Error:", response.status_code, response.text)
 
@@ -50,13 +50,13 @@ def wipe_thread(fingerprint: str):
     response = requests.post(f"{API_URL}/wipe", json=payload)
     if response.status_code == 200:
         data = response.json()
-        print("ASSISTANT:", data.get("response", "No message from assistant"))
+        print("ASSISTANT WIPE:", data.get("response", "No message from assistant"))
     else:
         print("Error:", response.status_code, response.text)
 
 def interact_with_chatbot():
     """Interact with the chatbot through the FastAPI API."""
-    fingerprint = "1"
+    fingerprint = "7"
     user_input = input("You (w to wipe thread): ")
     if user_input == "w":
         wipe_thread(fingerprint)
@@ -70,12 +70,12 @@ def interact_with_chatbot():
 
         if user_decision == "yes":
             resume_conversation(fingerprint, True)
+            break
         else:
             resume_conversation(fingerprint, False)
             break
 
-        # Check if the conversation has resumed or is done
-        conversation_active = chat_with_bot("continue", fingerprint)
+        
 
 while True:
     interact_with_chatbot()
