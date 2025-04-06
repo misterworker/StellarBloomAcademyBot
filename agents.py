@@ -4,17 +4,14 @@ from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langchain_core.tools import tool, InjectedToolArg
 from langchain_openai import ChatOpenAI
 
+from langgraph.graph import END
 from langgraph.types import Command, interrupt
 
 from helper import create_prompt, RAG
 import os
 
-NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-#TODO: Feedback to Ethan
-#TODO: Parse website content as pdf/docx and provide as downloadable content
-#TODO: Update prompt to prevent more than 1 tool call
 @tool
 def suspend_user(fingerprint: Annotated[str, InjectedToolArg]) -> str:
     """Temporarily suspend user that sends any inappropriate, unsafe or spam messages."""
@@ -32,7 +29,16 @@ def get_specifics() -> str:
         # graph=Command.PARENT, #specify which graph to goto, defaults to current
     )
 
-tools = [suspend_user, get_specifics]
+@tool
+def provide_feedback(feedback: str) -> None:
+    """
+    Pass feedback to Ethan. This feedback is the actual body of an email.
+    """
+    print("Feedback Passed: ", feedback)
+
+    return None
+
+tools = [suspend_user, get_specifics, provide_feedback]
 
 chatbot_llm = ChatOpenAI(
     model="gpt-4o-mini", #! switch to gpt 4o in prod

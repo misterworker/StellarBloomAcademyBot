@@ -7,7 +7,7 @@ from langgraph.types import Command, interrupt
 from typing import Annotated
 from typing_extensions import TypedDict, Literal
 
-from agents import chatbot_llm, RAG_llm, suspend_user, get_specifics
+from agents import chatbot_llm, RAG_llm, suspend_user, get_specifics, provide_feedback
 from helper import VectorStoreManager
 
 class State(TypedDict):
@@ -91,7 +91,7 @@ def human_review_node(state) -> Command[Literal["chatbot", "tools"]]:
     
 async def tool_node(state):
     new_messages = []
-    tools = {"suspend_user": suspend_user, "get_specifics": get_specifics}
+    tools = {"suspend_user": suspend_user, "get_specifics": get_specifics, "provide_feedback": provide_feedback,}
     tool_calls = state["messages"][-1].tool_calls
     for tool_call in tool_calls:
         tool = tools[tool_call["name"]]
@@ -125,7 +125,6 @@ graph_builder.add_conditional_edges(
     "chatbot",
     route_after_llm,
 )
-# graph_builder.add_edge("tools", "chatbot")
 graph_builder.add_conditional_edges(
     "tools",
     route_after_tool,
