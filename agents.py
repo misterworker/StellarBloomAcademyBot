@@ -4,7 +4,6 @@ from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langchain_core.tools import tool, InjectedToolArg
 from langchain_openai import ChatOpenAI
 
-from langgraph.graph import END
 from langgraph.types import Command, interrupt
 
 from helper import create_prompt, RAG
@@ -25,7 +24,7 @@ def get_specifics() -> str:
     """    
     return Command(
         goto="rag",
-        update={"messages": SystemMessage(create_prompt(stats=[], llm_type="RAG"))},
+        update={"messages": SystemMessage(create_prompt(info=[], llm_type="RAG"))},
         # graph=Command.PARENT, #specify which graph to goto, defaults to current
     )
 

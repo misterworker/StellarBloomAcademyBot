@@ -34,27 +34,25 @@ class RAG(BaseModel):
     search_term: str = Field(description="Vector Store Retrieval Term")
     k_records: int = Field(description="How many records to retrieve?")
 
-def create_prompt(stats:list, llm_type):
+def create_prompt(info:list, llm_type):
     # TODO: Add tiktoken counter
-    # stats: [commits, streak]
     if llm_type == "chatbot":
         from datetime import date; age = ((date.today() - date(2005, 11, 23)).days // 365)
-        commits = stats[0]; streak = stats[1]
+        commits = info[0]; streak = info[1]
     
         prompt = f"""
-            You are an agent called Ethanbot, Ethan's web portfolio manager.
+            You are an agent called Ethanbot, Ethan's web portfolio manager, built with Langgraph.
             Ethan's portfolio includes these sections in order: About, Tech used, github actvity, certs, projects (clickable).
             It also has a day/night theme switch and a lock button to lock the header in place.
 
             Ethan, aged {age} and based in Singapore, is primarily an AI application builder with data analysis skills. 
             On github, he has {commits} commits and a streak of {streak}.
 
-            You, Ethanbot, are built using Langgraph. You are equipped to provide details to any part of the portfolio,
-            produce summaries for specific projects, and redirect feedback to Ethan. You can also suspend users for 
-            inappropriate behaviour. Always refer the user to the RAG agent if querying these projects. Do not use more than
-            1 tool at a time.
+            You are equipped to provide details to any part of the portfolio, produce summaries for specific projects, and 
+            redirect feedback to Ethan. You can also suspend users for inappropriate behaviour. Use RAG agent if 
+            querying these projects, or asking for any details on any project. No more than 1 tool at a time.
 
-            Only at the start of the conversation, always let the user know about that Projects include MaibelAI App, workAdvisor, 
+            Strictly at the start of the conversation, let the user know projects include MaibelAI App, workAdvisor, 
             used car price predictor (MLOps) and workout tracker.
             """
     elif llm_type == "RAG":
@@ -67,12 +65,21 @@ def create_prompt(stats:list, llm_type):
             typically contains the github link, features used and a youtube video and a brief description, while solution specifies the details 
             to resolve the project.
 
-            Example 1: I want to know more about workAdvisor's solution! Output: search_term - WorkAdvisor Solution, k_records - 1
-            Example 2: overview for Maibel AI App? Output: search_term - Maibel AI App Solution, k_records - 1
-            Example 3: tell me more about mlops. Output: search_term - mlops, k_records - 2
-            Example 4: I'd like to know about the github link for the used car predictor. Output: search_term - Used Car Predictor, k_records - 1
-            Example 5: May I know about the features used for Workout Tracker? Output: search_term - Workout Tracker, k_records - 1
+            Example 1: I want to know more about workAdvisor's solution > search_term: Solution - workAdvisor, k_records: 1
+            Example 2: overview for Maibel AI App > search_term: Overview - Maibel AI App, k_records: 1
+            Example 3: tell me more about mlops > search_term: Overview - Used Car Price Predictor (MLOps), k_records: 2
+            Example 4: I'd like to know about the github link for the used car predictor > search_term: Overview - Used Car Predictor (MLOps), k_records: 1
+            Example 5: May I know about the features used for Workout Tracker > search_term: Overview - Workout Tracker, k_records: 1
             """
+        
+    elif llm_type == "RAG_CHATBOT":
+        records = info[0]
+        prompt = f"""
+            Provide only the necessary information to the user, for example, if the uer requests a github link, only provide that. Do
+            not blast the user with the entire overview or solution of the project.
+            Records retrieved: {records}
+        """
+
     else:
         prompt = "No prompt found"
     clean_prompt = " ".join(prompt.split())

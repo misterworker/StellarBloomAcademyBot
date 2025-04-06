@@ -35,9 +35,8 @@ async def lifespan(app: FastAPI):
     # try:
     #     with open("graph_output.png", "wb") as f:
     #         f.write(graph.get_graph().draw_mermaid_png())
-    # except Exception:
-    #     # This requires some extra dependencies and is optional
-    #     pass
+    # except Exception as e:
+    #     print("Exception while generating graph_output.png:", e)
 
     print("✅ Connection pool and graph initialized!")
     yield  # Yield control back to FastAPI while keeping the pool open
@@ -85,6 +84,7 @@ async def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: in
 async def resume_graph_updates(action, config):
     msg = ""
     async for resume_event in graph.astream(Command(resume={"action": action}), config):
+        print("Resume Event: ", resume_event)
         try:
             is_chatbot = resume_event.get("chatbot", False)
             is_rag = resume_event.get("rag", False)
@@ -94,7 +94,7 @@ async def resume_graph_updates(action, config):
         if is_chatbot:
             msg = resume_event["chatbot"]["messages"][-1].content
         elif is_rag:
-            msg = resume_event["rag"]["messages"][-1]
+            msg = resume_event["rag"]["messages"][-1].content
             
         if msg:
             return {"response": msg, "other": None}

@@ -1,4 +1,4 @@
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import ToolMessage, SystemMessage
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
@@ -8,7 +8,7 @@ from typing import Annotated
 from typing_extensions import TypedDict, Literal
 
 from agents import chatbot_llm, RAG_llm, suspend_user, get_specifics, provide_feedback
-from helper import VectorStoreManager
+from helper import VectorStoreManager, create_prompt
 
 class State(TypedDict):
     """Add attributes that are mutable via nodes, for example if the user type can change from guest to user with the help of
@@ -50,8 +50,10 @@ async def rag(state: State):
     pinecone_vs = VectorStoreManager()
     retrieved_docs = pinecone_vs.retrieve_from_vector_store(search_term, k_records)
     retrieved_context = "\n".join([res.page_content for res in retrieved_docs])
-
-    return {"messages": [retrieved_context]}
+    message = await chatbot_llm.ainvoke(
+        [SystemMessage(content = create_prompt(info=[retrieved_context], llm_type="RAG_CHATBOT"))] + state["messages"]
+    )
+    return {"messages": [message]}
 
 #* Tool related nodes
 def route_after_llm(state) -> Literal[END, "human_review_node", "tools"]:
@@ -117,8 +119,8 @@ def route_after_tool(state) -> Literal["rag", "chatbot"]:
 
 graph_builder.add_node("chatbot", chatbot)
 graph_builder.add_node("tools", tool_node)
-graph_builder.add_node("rag", rag)
 graph_builder.add_node(human_review_node)
+graph_builder.add_node("rag", rag)
 
 graph_builder.add_edge(START, "chatbot")
 graph_builder.add_conditional_edges(

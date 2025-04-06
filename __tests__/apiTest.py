@@ -75,7 +75,5 @@ def interact_with_chatbot():
             resume_conversation(fingerprint, False)
             break
 
-        
-
 while True:
     interact_with_chatbot()
