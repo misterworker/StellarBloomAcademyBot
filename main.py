@@ -14,7 +14,7 @@ from helper import create_prompt
 import os
 
 load_dotenv()
-DB_URI = os.getenv("DB_URI_LOCAL")
+DB_URI = os.getenv("DB_URI")
 
 graph = None
 pool = None
