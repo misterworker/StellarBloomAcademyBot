@@ -1,0 +1,22 @@
+# Exclude virtual environment
+venv/
+
+# Exclude Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Exclude environment variables file
+.env
+
+# Exclude other unwanted files
+*.log
+*.sqlite
+*.db
+
+.gitignore
+__tests__
+data
+scripts
+graph_output.png
+README.md
