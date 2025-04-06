@@ -34,11 +34,10 @@ class RAG(BaseModel):
     search_term: str = Field(description="Vector Store Retrieval Term")
     k_records: int = Field(description="How many records to retrieve?")
 
-def create_prompt(info:list, llm_type):
+def create_prompt(info:list, llm_type:str):
     # TODO: Add tiktoken counter
     if llm_type == "chatbot":
         from datetime import date; age = ((date.today() - date(2005, 11, 23)).days // 365)
-        commits = info[0]; streak = info[1]
     
         prompt = f"""
             You are an agent called Ethanbot, Ethan's web portfolio manager, built with Langgraph.
@@ -46,7 +45,6 @@ def create_prompt(info:list, llm_type):
             It also has a day/night theme switch and a lock button to lock the header in place.
 
             Ethan, aged {age} and based in Singapore, is primarily an AI application builder with data analysis skills. 
-            On github, he has {commits} commits and a streak of {streak}.
 
             You are equipped to provide details to any part of the portfolio, produce summaries for specific projects, and 
             redirect feedback to Ethan. You can also suspend users for inappropriate behaviour. Use RAG agent if 

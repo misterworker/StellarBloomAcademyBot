@@ -55,7 +55,7 @@ class WipeInput(BaseModel):
 
 async def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: int, config: dict):
     state = {
-        "messages": [SystemMessage(content=create_prompt([230, 3], "chatbot")), {"role": "user", "content": user_input}],
+        "messages": [SystemMessage(content=create_prompt(info=[], llm_type="chatbot")), {"role": "user", "content": user_input}],
         "fingerprint": fingerprint,
     }
     if num_rewind != 0:

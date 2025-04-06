@@ -8,9 +8,25 @@ from langgraph.types import Command, interrupt
 
 from helper import create_prompt, RAG
 from db import pool
-import os
+import httpx, os
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GITHUB_CONTRIBUTIONS = os.getenv("GITHUB_CONTRIBUTIONS")
+gh_local = "http://127.0.0.1:8001/contributions/misterworker"
+
+@tool
+async def fetch_contributions() -> str:
+    """Obtain github contributions for Ethan (Username misterworker)"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(gh_local)
+            response.raise_for_status()
+            data = response.json()
+        print("Data: ", data)
+        return data.get("contributions", "No contributions found.")
+    except Exception as e:
+        print(f"fetch_contributions error: {e}")
+        return "Failed to fetch contributions due to internal error."
 
 @tool
 async def suspend_user(fingerprint: Annotated[str, InjectedToolArg]) -> str:
@@ -50,7 +66,7 @@ async def provide_feedback(feedback: str) -> None:
 
     return None
 
-tools = [suspend_user, get_specifics, provide_feedback]
+tools = [fetch_contributions, suspend_user, get_specifics, provide_feedback]
 
 chatbot_llm = ChatOpenAI(
     model="gpt-4o-mini", #! switch to gpt 4o in prod
