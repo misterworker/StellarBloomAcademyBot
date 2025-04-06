@@ -7,18 +7,31 @@ from langchain_openai import ChatOpenAI
 from langgraph.types import Command, interrupt
 
 from helper import create_prompt, RAG
+from db import pool
 import os
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 @tool
-def suspend_user(fingerprint: Annotated[str, InjectedToolArg]) -> str:
+async def suspend_user(fingerprint: Annotated[str, InjectedToolArg]) -> str:
     """Temporarily suspend user that sends any inappropriate, unsafe or spam messages."""
-    # Only banned during runtime at the moment
-    return f"blud got suspended"
+    try:
+        async with pool.connection() as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute("""
+                    INSERT INTO users (fingerprint, banned)
+                    VALUES (%s, TRUE)
+                    ON CONFLICT (fingerprint)
+                    DO UPDATE SET banned = TRUE;
+                """, (fingerprint,))
+                await conn.commit()
+        return "User has been suspended."
+    except Exception as e:
+        print(f"suspend_user error: {e}")
+        return "Failed to suspend user due to internal error."
 
 @tool
-def get_specifics() -> str:
+async def get_specifics() -> str:
     """
     Pass to rag agent to retrieve specific project or portfolio information
     """    
@@ -29,7 +42,7 @@ def get_specifics() -> str:
     )
 
 @tool
-def provide_feedback(feedback: str) -> None:
+async def provide_feedback(feedback: str) -> None:
     """
     Pass feedback to Ethan. This feedback is the actual body of an email.
     """

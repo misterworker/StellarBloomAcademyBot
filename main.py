@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from psycopg_pool import AsyncConnectionPool
 
 from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
@@ -10,6 +9,7 @@ from langgraph.types import Command
 
 from build_graph import graph_builder
 from helper import create_prompt
+from db import pool
 
 import os
 
@@ -17,17 +17,12 @@ load_dotenv()
 DB_URI = os.getenv("DB_URI")
 
 graph = None
-pool = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Keep the connection pool open as long as the app is alive."""
-    global graph, pool
-    pool = AsyncConnectionPool(
-        conninfo=DB_URI,
-        max_size=5,
-        kwargs={"autocommit": True, "prepare_threshold": 0},
-    )
+    global graph
+  
     checkpointer = AsyncPostgresSaver(pool)
     # await checkpointer.setup()
     graph = graph_builder.compile(checkpointer=checkpointer)
