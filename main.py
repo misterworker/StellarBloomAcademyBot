@@ -11,12 +11,16 @@ from build_graph import graph_builder
 from helper import create_prompt
 from db import pool
 
-import os
+import os, sys, asyncio
 
 load_dotenv()
 DB_URI = os.getenv("DB_URI")
 
 graph = None
+
+# Fix for Windows event loop compatibility with psycopg async
+if sys.platform.startswith('win'):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
