@@ -12,14 +12,14 @@ import httpx, os
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GITHUB_CONTRIBUTIONS = os.getenv("GITHUB_CONTRIBUTIONS")
-gh_local = "http://127.0.0.1:8001/contributions/misterworker"
+gh_local = "http://localhost:8000/contributions/misterworker"
 
 @tool
 async def fetch_contributions() -> str:
     """Obtain github contributions for Ethan (Username misterworker)"""
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(gh_local)
+            response = await client.get(GITHUB_CONTRIBUTIONS)
             response.raise_for_status()
             data = response.json()
         print("Data: ", data)
