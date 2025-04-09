@@ -93,7 +93,7 @@ async def resume_graph_updates(action, config):
     msg = ""
     tool_msg = None
     async for resume_event in graph.astream(Command(resume={"action": action}), config):
-        print("Resume Event: ", resume_event)
+        # print("Resume Event: ", resume_event)
 
         is_chatbot = resume_event.get("chatbot", False)
         is_rag = resume_event.get("rag", False)
@@ -120,7 +120,7 @@ async def clear_thread(thread_id: str):
                 await cursor.execute("DELETE FROM checkpoint_blobs WHERE thread_id = %s", (thread_id,))
 
                 await conn.commit()
-                print(f"✅ Wiped data for thread_id: {thread_id}")
+                # print(f"✅ Wiped data for thread_id: {thread_id}")
                 return {"response": True, "other": None}
 
             except Exception as exception:

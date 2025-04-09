@@ -44,7 +44,7 @@ async def chatbot(state: State):
 
 async def rag(state: State):
     result = await RAG_llm.ainvoke(state["messages"])
-    print("rag result: ", result)
+    # print("rag result: ", result)
     search_term = result.search_term
     k_records = result.k_records
     pinecone_vs = VectorStoreManager()
@@ -110,7 +110,7 @@ async def tool_node(state):
 
 def route_after_tool(state) -> Literal["rag", "chatbot"]:
     last_message = state["messages"][-1]
-    print("route state after tool: ", last_message)
+    # print("route state after tool: ", last_message)
 
     if isinstance(last_message, ToolMessage) and last_message.name == "get_specifics":
         return "rag"

@@ -22,10 +22,10 @@ async def fetch_contributions() -> str:
             response = await client.get(GITHUB_CONTRIBUTIONS)
             response.raise_for_status()
             data = response.json()
-        print("Data: ", data)
+        # print("Data: ", data)
         return data.get("contributions", "No contributions found.")
     except Exception as e:
-        print(f"fetch_contributions error: {e}")
+        print(f"❌fetch_contributions error: {e}")
         return "Failed to fetch contributions due to internal error."
 
 @tool
@@ -43,7 +43,7 @@ async def suspend_user(fingerprint: Annotated[str, InjectedToolArg]) -> str:
                 await conn.commit()
         return "User has been suspended."
     except Exception as e:
-        print(f"suspend_user error: {e}")
+        print(f"❌suspend_user error: {e}")
         return "Failed to suspend user due to internal error."
 
 @tool
@@ -62,7 +62,6 @@ async def provide_feedback(feedback: str) -> None:
     """
     Pass feedback to Ethan. This feedback is the actual body of an email.
     """
-    print("Feedback Passed: ", feedback)
 
     return feedback
 
