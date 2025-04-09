@@ -82,21 +82,24 @@ async def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: in
 
 async def resume_graph_updates(action, config):
     msg = ""
+    tool_msg = None
     async for resume_event in graph.astream(Command(resume={"action": action}), config):
         print("Resume Event: ", resume_event)
-        try:
-            is_chatbot = resume_event.get("chatbot", False)
-            is_rag = resume_event.get("rag", False)
-        except:
-            is_chatbot = False
-            is_rag = False
+
+        is_chatbot = resume_event.get("chatbot", False)
+        is_rag = resume_event.get("rag", False)
+        is_tool = resume_event.get("tools", False)
+        
+        if is_tool:
+            tool_msg = resume_event["tools"]["messages"][-1].get("content", None)
+            continue
         if is_chatbot:
             msg = resume_event["chatbot"]["messages"][-1].content
         elif is_rag:
             msg = resume_event["rag"]["messages"][-1].content
             
         if msg:
-            return {"response": msg, "other": None}
+            return {"response": msg, "other": tool_msg}
         
 async def clear_thread(thread_id: str):
     """Deletes all records related to the given thread_id."""

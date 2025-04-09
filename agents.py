@@ -64,7 +64,7 @@ async def provide_feedback(feedback: str) -> None:
     """
     print("Feedback Passed: ", feedback)
 
-    return None
+    return feedback
 
 tools = [fetch_contributions, suspend_user, get_specifics, provide_feedback]
 
