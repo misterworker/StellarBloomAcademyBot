@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
+from langchain_core.messages import SystemMessage
 from langchain_core.tools import tool, InjectedToolArg
 from langchain_openai import ChatOpenAI
 
@@ -60,7 +60,7 @@ async def get_specifics() -> str:
 @tool
 async def provide_feedback(feedback: str) -> None:
     """
-    Pass feedback to Ethan. This feedback is the actual body of an email.
+    Pass feedback to Ethan. This is the body of an email client side that he will send to Ethan.
     """
 
     return feedback
