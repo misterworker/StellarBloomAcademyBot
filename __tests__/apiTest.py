@@ -16,8 +16,8 @@ def chat_with_bot(user_input: str, fingerprint: str, num_rewind: int = 0):
     if response.status_code == 200:
         data = response.json()
         response = data["response"]
-        other = data["other"]
-        if other == "interrupt":
+        other_name = data["other_name"]
+        if other_name == "interrupt":
             print("Human Review Time!")
             return True
         else:
@@ -39,6 +39,13 @@ def resume_conversation(fingerprint: str, action: bool):
     
     if response.status_code == 200:
         data = response.json()
+        other_name = data["other_name"]
+        if other_name != None:
+            print("Tool Called!")
+            if other_name == "provide_feedback":
+                other_msg = data["other_msg"]
+                # In app, go to email and paste other_msg in body
+                print("Email Body: ", other_msg)
         print("ASSISTANT RESUME:", data.get("response", "No message from assistant"))
     else:
         print("Error:", response.status_code, response.text)

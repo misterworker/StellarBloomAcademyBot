@@ -76,7 +76,7 @@ async def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: in
     async for event in graph.astream(state, config):
         msg = ""
         if "__interrupt__" in event:
-            return {"response":"", "other":"interrupt"}
+            return {"response":"", "other_name":"interrupt", "other_msg": None}
 
         elif "tools" in event:
             # For tools that don't require human review
@@ -87,7 +87,7 @@ async def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: in
                 msg = value["messages"][-1].content
 
         if msg:
-            return {"response": msg, "other": None}
+            return {"response": msg, "other_name": None, "other_msg": None}
 
 async def resume_graph_updates(action, config):
     msg = ""
@@ -100,6 +100,7 @@ async def resume_graph_updates(action, config):
         is_tool = resume_event.get("tools", False)
         
         if is_tool:
+            tool_name = resume_event["tools"]["messages"][-1].get("name", None)
             tool_msg = resume_event["tools"]["messages"][-1].get("content", None)
             continue
         if is_chatbot:
@@ -108,7 +109,7 @@ async def resume_graph_updates(action, config):
             msg = resume_event["rag"]["messages"][-1].content
             
         if msg:
-            return {"response": msg, "other": tool_msg}
+            return {"response": msg, "other_name": tool_name, "other_msg": tool_msg}
         
 async def clear_thread(thread_id: str):
     """Deletes all records related to the given thread_id."""
@@ -121,12 +122,12 @@ async def clear_thread(thread_id: str):
 
                 await conn.commit()
                 # print(f"✅ Wiped data for thread_id: {thread_id}")
-                return {"response": True, "other": None}
+                return {"response": True, "other_name": None, "other_msg": None}
 
             except Exception as exception:
                 await conn.rollback()
                 print(f"❌ Error in wipe(): {exception}")
-                return {"response": False, "other": None}
+                return {"response": False, "other_name": None, "other_msg": None}
 
 def rewind(num_rewind:int, config, user_input):
     #TODO: fix. essentially need to clear old states instead of appending, which is what update_state seems to do, and also figure out the most effective way to time travel without relying on node type perhaps.
