@@ -6,15 +6,16 @@ WORKDIR /app
 
 # Install dependencies
 COPY requirements.txt .
-
-# Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the current directory contents into the container at /app
+# Copy the entire project into the container
 COPY . .
 
-# Expose the port that uvicorn will run on
+# Set the PYTHONPATH environment variable so Python can resolve src imports
+ENV PYTHONPATH=/app/src
+
+# Expose the port uvicorn will listen on
 EXPOSE 8000
 
-# Run uvicorn with the app on start
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run uvicorn using the src layout
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

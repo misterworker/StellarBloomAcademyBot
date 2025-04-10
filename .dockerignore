@@ -15,8 +15,5 @@ __pycache__/
 *.db
 
 .gitignore
-__tests__
-data
-scripts
 graph_output.png
 README.md

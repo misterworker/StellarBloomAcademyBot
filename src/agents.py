@@ -12,7 +12,6 @@ import httpx, os
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GITHUB_CONTRIBUTIONS = os.getenv("GITHUB_CONTRIBUTIONS")
-gh_local = "http://localhost:8000/contributions/misterworker"
 
 @tool
 async def fetch_contributions() -> str:

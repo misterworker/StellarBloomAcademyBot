@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     graph = graph_builder.compile(checkpointer=checkpointer)
     
     # try:
-    #     with open("graph_output.png", "wb") as f:
+    #     with open("../graph_output.png", "wb") as f:
     #         f.write(graph.get_graph().draw_mermaid_png())
     # except Exception as e:
     #     print("Exception while generating graph_output.png:", e)
@@ -49,6 +49,7 @@ from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://portfolio-phi-mocha-72.vercel.app/", "http://localhost:3000"],
+    # allow_origins=["https://portfolio-phi-mocha-72.vercel.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
