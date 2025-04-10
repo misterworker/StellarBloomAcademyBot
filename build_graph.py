@@ -43,17 +43,19 @@ async def chatbot(state: State):
     return {"messages": [message]}
 
 async def rag(state: State):
-    result = await RAG_llm.ainvoke(state["messages"])
-    # print("rag result: ", result)
-    search_term = result.search_term
-    k_records = result.k_records
-    pinecone_vs = VectorStoreManager()
-    retrieved_docs = pinecone_vs.retrieve_from_vector_store(search_term, k_records)
-    retrieved_context = "\n".join([res.page_content for res in retrieved_docs])
-    message = await chatbot_llm.ainvoke(
-        [SystemMessage(content = create_prompt(info=[retrieved_context], llm_type="RAG_CHATBOT"))] + state["messages"]
-    )
-    return {"messages": [message]}
+    try:
+        result = await RAG_llm.ainvoke(state["messages"])
+        search_term = result.search_term
+        k_records = result.k_records
+        pinecone_vs = VectorStoreManager()
+        retrieved_docs = pinecone_vs.retrieve_from_vector_store(search_term, k_records)
+        retrieved_context = "\n".join([res.page_content for res in retrieved_docs])
+        message = await chatbot_llm.ainvoke(
+            [SystemMessage(content = create_prompt(info=[retrieved_context], llm_type="RAG_CHATBOT"))] + state["messages"]
+        )
+        return {"messages": [message]}
+    except Exception as e:
+        print("❌Rag error: ", e)
 
 #* Tool related nodes
 def route_after_llm(state) -> Literal[END, "human_review_node", "tools"]:

@@ -90,7 +90,6 @@ def create_prompt(info:list, llm_type:str):
         return "\n".join(cleaned_parts)
 
     cleaned_prompt = clean_prompt(prompt)
-    print("cleaned prompt: ", cleaned_prompt)
 
     return cleaned_prompt
 

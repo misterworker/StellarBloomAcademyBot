@@ -76,7 +76,7 @@ async def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: in
     async for event in graph.astream(state, config):
         msg = ""
         if "__interrupt__" in event:
-            return {"response":"", "other_name":"interrupt", "other_msg": None}
+            return {"response":"", "other_name":"interrupt", "other_msg": None} #TODO: Turn other msg into tool name
 
         elif "tools" in event:
             # For tools that don't require human review
@@ -91,25 +91,32 @@ async def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: in
 
 async def resume_graph_updates(action, config):
     msg = ""
+    tool_name = None
     tool_msg = None
-    async for resume_event in graph.astream(Command(resume={"action": action}), config):
-        # print("Resume Event: ", resume_event)
-
-        is_chatbot = resume_event.get("chatbot", False)
-        is_rag = resume_event.get("rag", False)
-        is_tool = resume_event.get("tools", False)
-        
-        if is_tool:
-            tool_name = resume_event["tools"]["messages"][-1].get("name", None)
-            tool_msg = resume_event["tools"]["messages"][-1].get("content", None)
-            continue
-        if is_chatbot:
-            msg = resume_event["chatbot"]["messages"][-1].content
-        elif is_rag:
-            msg = resume_event["rag"]["messages"][-1].content
+    try:
+        async for resume_event in graph.astream(Command(resume={"action": action}), config):
+            # print("Resume Event: ", resume_event)
+            is_chatbot = resume_event.get("chatbot", False)
+            is_rag = resume_event.get("rag", False)
+            is_tool = resume_event.get("tools", False)
             
-        if msg:
-            return {"response": msg, "other_name": tool_name, "other_msg": tool_msg}
+            if is_tool:
+                tool_name = resume_event["tools"]["messages"][-1].get("name", None)
+                tool_msg = resume_event["tools"]["messages"][-1].get("content", None)
+                continue
+            if is_chatbot:
+                msg = resume_event["chatbot"]["messages"][-1].content
+            elif is_rag:
+                msg = resume_event["rag"]["messages"][-1].content
+            
+            if msg:
+                return {"response": msg, "other_name": tool_name, "other_msg": tool_msg}
+        
+        return {"response": None, "other_name": tool_name, "other_msg": tool_msg}
+    
+    except Exception as e:
+        print(f"❌ Error in resume(): {e}")
+        return {"response": False, "other_name": None, "other_msg": None}
         
 async def clear_thread(thread_id: str):
     """Deletes all records related to the given thread_id."""
@@ -176,7 +183,7 @@ async def chat(input: UserInput):
         config = {"configurable": {"thread_id": fingerprint}}
         
         result = await stream_graph_updates(user_input, fingerprint, num_rewind, config)
-        print("chat result: ", result)
+        # print("chat result: ", result)
         return result
 
     except Exception as e:
@@ -190,7 +197,6 @@ async def wipe(input: WipeInput):
         if not fingerprint:
             raise HTTPException(status_code=400, detail="Fingerprint is required.")
         result = await clear_thread(fingerprint)
-        print("wipe result: ", result)
         return result
         
     except Exception as e:
