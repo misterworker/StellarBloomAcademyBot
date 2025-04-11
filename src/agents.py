@@ -23,7 +23,6 @@ async def fetch_contributions() -> str:
             response = await client.get(GITHUB_CONTRIBUTIONS)
             response.raise_for_status()
             data = response.json()
-        # print("Data: ", data)
         return data.get("contributions", "No contributions found.")
     except Exception as e:
         print(f"❌fetch_contributions error: {e}")
@@ -31,8 +30,7 @@ async def fetch_contributions() -> str:
 
 @tool
 async def suspend_user(fingerprint: Annotated[str, InjectedToolArg]) -> str:
-    """Temporarily suspend user that sends any inappropriate, unsafe or spam messages."""
-    print("fingerprint: ", fingerprint)
+    """Temporarily suspend user that repeatedly behaves inappropriately"""
     try:
         async with pool.connection() as conn:
             async with conn.cursor() as cursor:

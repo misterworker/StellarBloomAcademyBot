@@ -1,7 +1,6 @@
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 
 from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
@@ -136,7 +135,6 @@ def rewind(num_rewind:int, config, user_input):
             if num_rewind == num_encountered:
                 config = state.config
                 last_message = state.values["messages"][-1]
-                print("last message: ", last_message)
                 new_message = HumanMessage(
                     content=user_input,
                     id=last_message.id
@@ -149,13 +147,11 @@ def rewind(num_rewind:int, config, user_input):
 async def resume_process(input: ResumeInput):
     try:
         action = input.action
-
         user_id = input.user_id
         if action is None or not user_id:
             raise HTTPException(status_code=400, detail=f"Input not provided: {input}")
         config = {"configurable": {"thread_id": user_id}}
         result = await resume_graph_updates(action, config)
-        print("resume result: ", result)
         return result
 
     except Exception as e:
@@ -175,7 +171,7 @@ async def chat(input: UserInput):
         config = {"configurable": {"thread_id": user_id}}
         
         result = await stream_graph_updates(fingerprint, user_id, user_input, num_rewind, config)
-        # print("chat result: ", result)
+
         return result
 
     except Exception as e:

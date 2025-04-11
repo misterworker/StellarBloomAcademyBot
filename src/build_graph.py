@@ -41,7 +41,7 @@ async def rag(state: State):
         )
         return {"messages": [message]}
     except Exception as e:
-        print("❌Rag error: ", e)
+        print("❌RAG error: ", e)
 
 #* Tool related nodes
 def route_after_llm(state) -> Literal[END, "human_review_node", "tools"]:
@@ -98,7 +98,6 @@ async def tool_node(state):
 
 def route_after_tool(state) -> Literal["rag", "chatbot"]:
     last_message = state["messages"][-1]
-    # print("route state after tool: ", last_message)
 
     if isinstance(last_message, ToolMessage) and last_message.name == "get_specifics":
         return "rag"
