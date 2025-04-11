@@ -8,8 +8,9 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.types import Command
 
 from build_graph import graph_builder
-from helper import create_prompt, UserInput, WipeInput, ResumeInput
+from config import CORS_ORIGINS
 from db import pool
+from helper import create_prompt, UserInput, WipeInput, ResumeInput
 
 import os, sys, asyncio
 
@@ -48,8 +49,7 @@ app = FastAPI(lifespan=lifespan)
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://portfolio-phi-mocha-72.vercel.app/", "http://localhost:3000"],
-    # allow_origins=["https://portfolio-phi-mocha-72.vercel.app/"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

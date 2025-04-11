@@ -6,8 +6,10 @@ from langchain_openai import ChatOpenAI
 
 from langgraph.types import Command, interrupt
 
-from helper import create_prompt, RAG
+from config import GPT_TYPE
 from db import pool
+from helper import create_prompt, RAG
+
 import httpx, os
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -69,7 +71,7 @@ async def draft_email(body: str) -> None:
 tools = [fetch_contributions, suspend_user, get_specifics, draft_email]
 
 chatbot_llm = ChatOpenAI(
-    model="gpt-4o-mini", #! switch to gpt 4o in prod
+    model=GPT_TYPE,
     temperature=0.8,
     max_tokens=5000,
     timeout=20,
@@ -78,7 +80,7 @@ chatbot_llm = ChatOpenAI(
 ).bind_tools(tools)
 
 RAG_llm = ChatOpenAI(
-    model="gpt-4o",
+    model=GPT_TYPE,
     temperature=0,
     max_tokens=250,
     timeout=20,
