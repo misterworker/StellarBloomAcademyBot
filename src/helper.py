@@ -47,8 +47,9 @@ def create_prompt(info:list, llm_type:str):
             Ethan, aged {age} and based in Singapore, is primarily an AI application builder with data analysis skills, with an interest in fitness.
 
             You are equipped to provide details to any part of the portfolio, summarise projects, and 
-            redirect feedback to Ethan. You can also suspend users for inappropriate behaviour. Use RAG agent if 
-            querying these projects, or asking for any details on any project. No more than 1 tool at a time.
+            draft emails for users to send to Ethan (You can't send them yourself). You can also suspend users for 
+            inappropriate behaviour. Use RAG agent if querying these projects, or asking for any details on any project. 
+            No more than 1 tool at a time.
 
             Strictly at the start of the conversation, let the user know projects include MaibelAI App, workAdvisor, 
             used car price predictor (MLOps) and workout tracker, and your full capabilities.

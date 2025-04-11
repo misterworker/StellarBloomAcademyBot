@@ -57,14 +57,15 @@ async def get_specifics() -> str:
     )
 
 @tool
-async def provide_feedback(feedback: str) -> None:
+async def draft_email(body: str) -> None:
     """
-    Pass feedback to Ethan. This is the body of an email client side that he will send to Ethan.
+    Assist human with email draft generation by outputting email body
+    Args: body(str)
     """
 
-    return feedback
+    return body
 
-tools = [fetch_contributions, suspend_user, get_specifics, provide_feedback]
+tools = [fetch_contributions, suspend_user, get_specifics, draft_email]
 
 chatbot_llm = ChatOpenAI(
     model="gpt-4o-mini", #! switch to gpt 4o in prod
