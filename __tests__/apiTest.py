@@ -3,9 +3,10 @@ import time
 
 API_URL = "http://127.0.0.1:8000"
 
-def chat_with_bot(user_input: str, fingerprint: str, num_rewind: int = 0):
+def chat_with_bot(user_id: str, user_input: str, fingerprint: str, num_rewind: int = 0):
     """Start a conversation with the chatbot."""
     payload = {
+        "user_id": user_id,
         "user_input": user_input,
         "fingerprint": fingerprint,
         "num_rewind": num_rewind
@@ -27,11 +28,11 @@ def chat_with_bot(user_input: str, fingerprint: str, num_rewind: int = 0):
         print("Error:", response.status_code, response.text)
         return False
 
-def resume_conversation(fingerprint: str, action: bool):
+def resume_conversation(user_id: str, action: bool):
     """Resume the conversation if paused for user input."""
     payload = {
         "action": action,
-        "fingerprint": fingerprint,
+        "user_id": user_id,
     }
 
     # Sending the resume decision to the FastAPI app
@@ -50,9 +51,9 @@ def resume_conversation(fingerprint: str, action: bool):
     else:
         print("Error:", response.status_code, response.text)
 
-def wipe_thread(fingerprint: str):
+def wipe_thread(user_id: str):
     payload = {
-        "fingerprint": fingerprint,
+        "user_id": user_id,
     }
     response = requests.post(f"{API_URL}/wipe", json=payload)
     if response.status_code == 200:
@@ -63,23 +64,24 @@ def wipe_thread(fingerprint: str):
 
 def interact_with_chatbot():
     """Interact with the chatbot through the FastAPI API."""
-    fingerprint = "7"
+    user_id = "abc"
+    fingerprint = "pseudoFingerprint"
     user_input = input("You (w to wipe thread): ")
     if user_input == "w":
-        wipe_thread(fingerprint)
+        wipe_thread(user_id)
         return
 
-    conversation_active = chat_with_bot(user_input, fingerprint)
+    conversation_active = chat_with_bot(user_id, user_input, fingerprint)
 
     # If the conversation requires user input to continue, ask the user
     while conversation_active:
         user_decision = input("Do you want to continue? (yes/no): ").strip().lower()
 
         if user_decision == "yes":
-            resume_conversation(fingerprint, True)
+            resume_conversation(user_id, True)
             break
         else:
-            resume_conversation(fingerprint, False)
+            resume_conversation(user_id, False)
             break
 
 while True:

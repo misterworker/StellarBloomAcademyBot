@@ -8,7 +8,7 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.types import Command
 
 from build_graph import graph_builder
-from helper import create_prompt
+from helper import create_prompt, UserInput, WipeInput, ResumeInput
 from db import pool
 
 import os, sys, asyncio
@@ -55,21 +55,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class UserInput(BaseModel):
-    user_input: str
-    num_rewind: int = 0
-    fingerprint: str
-
-class ResumeInput(BaseModel):
-    action: bool
-    fingerprint: str
-
-class WipeInput(BaseModel):
-    fingerprint: str
-
-async def stream_graph_updates(user_input: str, fingerprint: str, num_rewind: int, config: dict):
+async def stream_graph_updates(fingerprint: str, user_id: str, user_input: str, num_rewind: int, config: dict):
     state = {
         "messages": [SystemMessage(content=create_prompt(info=[], llm_type="chatbot")), {"role": "user", "content": user_input}],
+        "user_id": user_id,
         "fingerprint": fingerprint,
     }
     if num_rewind != 0:
@@ -160,12 +149,11 @@ def rewind(num_rewind:int, config, user_input):
 async def resume_process(input: ResumeInput):
     try:
         action = input.action
-        fingerprint = input.fingerprint
-        if action is None:
-            raise HTTPException(status_code=400, detail="Action is required.")
-        if not fingerprint:
-            raise HTTPException(status_code=400, detail="Fingerprint is required.")
-        config = {"configurable": {"thread_id": fingerprint}}
+
+        user_id = input.user_id
+        if action is None or not user_id:
+            raise HTTPException(status_code=400, detail=f"Input not provided: {input}")
+        config = {"configurable": {"thread_id": user_id}}
         result = await resume_graph_updates(action, config)
         print("resume result: ", result)
         return result
@@ -176,14 +164,17 @@ async def resume_process(input: ResumeInput):
 @app.post("/chat")
 async def chat(input: UserInput):
     try:
+        user_id = input.user_id
+        fingerprint = input.fingerprint
         user_input = input.user_input
         num_rewind = input.num_rewind
-        fingerprint = input.fingerprint
-        if not fingerprint:
-            raise HTTPException(status_code=400, detail="Fingerprint is required.")
-        config = {"configurable": {"thread_id": fingerprint}}
         
-        result = await stream_graph_updates(user_input, fingerprint, num_rewind, config)
+        if not user_id or not fingerprint:
+            raise HTTPException(status_code=400, detail=f"Input not provided: {input}")
+
+        config = {"configurable": {"thread_id": user_id}}
+        
+        result = await stream_graph_updates(fingerprint, user_id, user_input, num_rewind, config)
         # print("chat result: ", result)
         return result
 
@@ -194,10 +185,10 @@ async def chat(input: UserInput):
 # Should be used to wipe history when user leaves site or wants to
 async def wipe(input: WipeInput):
     try:
-        fingerprint = input.fingerprint
-        if not fingerprint:
-            raise HTTPException(status_code=400, detail="Fingerprint is required.")
-        result = await clear_thread(fingerprint)
+        user_id = input.user_id
+        if not user_id:
+            raise HTTPException(status_code=400, detail="User ID is required.")
+        result = await clear_thread(user_id)
         return result
         
     except Exception as e:

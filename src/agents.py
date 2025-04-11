@@ -30,6 +30,7 @@ async def fetch_contributions() -> str:
 @tool
 async def suspend_user(fingerprint: Annotated[str, InjectedToolArg]) -> str:
     """Temporarily suspend user that sends any inappropriate, unsafe or spam messages."""
+    print("fingerprint: ", fingerprint)
     try:
         async with pool.connection() as conn:
             async with conn.cursor() as cursor:

@@ -1,29 +1,15 @@
+from copy import deepcopy
+from typing_extensions import Literal
+
 from langchain_core.messages import ToolMessage, SystemMessage
 
 from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
 from langgraph.types import Command, interrupt
 
-from typing import Annotated
-from typing_extensions import TypedDict, Literal
-
 from agents import chatbot_llm, RAG_llm, fetch_contributions, suspend_user, get_specifics, draft_email
-from helper import VectorStoreManager, create_prompt
-
-class State(TypedDict):
-    """Add attributes that are mutable via nodes, for example if the user type can change from guest to user with the help of
-    a node in the graph, we should add user type as an attribute"""
-
-    # Messages have the type "list". The `add_messages` function
-    # in the annotation defines how this state key should be updated
-    # (in this case, it appends messages to the list, rather than overwriting them)
-    messages: Annotated[list, add_messages]
-    fingerprint: str
-
+from helper import create_prompt, State, VectorStoreManager
 
 graph_builder = StateGraph(State)
-
-from copy import deepcopy
 
 #* Agent Nodes
 async def chatbot(state: State):

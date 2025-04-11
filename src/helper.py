@@ -1,8 +1,10 @@
 from dotenv import load_dotenv
 from pinecone import Pinecone
 from pydantic import BaseModel, Field
+from typing import Annotated
+from typing_extensions import TypedDict
 
-from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
+from langgraph.graph.message import add_messages
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 
@@ -12,6 +14,17 @@ load_dotenv()
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 INDEX_NAME = "portfolio"
+
+class State(TypedDict):
+    """Add attributes that are mutable via nodes, for example if the user type can change from guest to user with the help of
+    a node in the graph, we should add user type as an attribute"""
+
+    # Messages have the type "list". The `add_messages` function
+    # in the annotation defines how this state key should be updated
+    # (in this case, it appends messages to the list, rather than overwriting them)
+    messages: Annotated[list, add_messages]
+    user_id: str
+    fingerprint: str
 
 class VectorStoreManager:
     def __init__(self):
@@ -33,6 +46,19 @@ class RAG(BaseModel):
     """Create vector store retrieval search term and number of records to retrieve"""
     search_term: str = Field(description="Vector Store Retrieval Term")
     k_records: int = Field(description="How many records to retrieve?")
+
+class UserInput(BaseModel):
+    fingerprint: str
+    user_id: str
+    user_input: str
+    num_rewind: int = 0
+
+class ResumeInput(BaseModel):
+    action: bool
+    user_id: str
+
+class WipeInput(BaseModel):
+    user_id: str
 
 def create_prompt(info:list, llm_type:str):
     # TODO: Add tiktoken counter
