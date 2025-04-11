@@ -7,8 +7,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.types import Command, interrupt
 
 from config import GPT_TYPE
-from db import pool
-from helper import create_prompt, RAG
+from helper import create_prompt, pool, RAG
 
 import httpx, os
 
