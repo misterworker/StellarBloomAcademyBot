@@ -8,8 +8,7 @@ from langgraph.types import Command
 
 from build_graph import graph_builder
 from config import CORS_ORIGINS
-from db import pool
-from helper import create_prompt, UserInput, WipeInput, ResumeInput
+from helper import create_prompt, pool, ResumeInput, UserInput, WipeInput
 
 import os, sys, asyncio
 

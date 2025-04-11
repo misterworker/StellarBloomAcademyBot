@@ -1,6 +1,6 @@
-from dotenv import load_dotenv
 from pinecone import Pinecone
 from pydantic import BaseModel, Field
+from psycopg_pool import AsyncConnectionPool
 from typing import Annotated
 from typing_extensions import TypedDict
 
@@ -10,11 +10,15 @@ from langchain_pinecone import PineconeVectorStore
 
 import os
 
-load_dotenv()
+#? Langgraph Database Connection Pool
+DB_URI = os.getenv("DB_URI")
+pool = AsyncConnectionPool(
+    conninfo=DB_URI,
+    max_size=5,
+    kwargs={"autocommit": True, "prepare_threshold": 0},
+)
 
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-INDEX_NAME = "portfolio"
-
+#? Langgraph State
 class State(TypedDict):
     """Add attributes that are mutable via nodes, for example if the user type can change from guest to user with the help of
     a node in the graph."""
@@ -26,6 +30,9 @@ class State(TypedDict):
     user_id: str
     fingerprint: str
 
+#? Pinecone Vector Store Setup
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+INDEX_NAME = "portfolio"
 class VectorStoreManager:
     def __init__(self):
         self._initialize_pinecone()
@@ -42,11 +49,13 @@ class VectorStoreManager:
         results = vector_store.similarity_search(query, k=top_k)
         return results
     
+#? Class for Structured Outputs
 class RAG(BaseModel):
     """Create vector store retrieval search term and number of records to retrieve"""
     search_term: str = Field(description="Vector Store Retrieval Term")
     k_records: int = Field(description="How many records to retrieve?")
 
+#? Endpoint Inputs
 class UserInput(BaseModel):
     fingerprint: str
     user_id: str
@@ -60,6 +69,7 @@ class ResumeInput(BaseModel):
 class WipeInput(BaseModel):
     user_id: str
 
+#? Helper functions
 def create_prompt(info:list, llm_type:str):
     # TODO: Add tiktoken counter
     if llm_type == "chatbot":
@@ -121,4 +131,3 @@ def create_prompt(info:list, llm_type:str):
     cleaned_prompt = clean_prompt(prompt)
 
     return cleaned_prompt
-
