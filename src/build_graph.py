@@ -31,7 +31,6 @@ async def chatbot(state: State):
 async def rag(state: State):
     try:
         result = await RAG_llm.ainvoke(state["messages"])
-        print("Result: ", result)
         search_term = result.search_term
         k_records = result.k_records
         pinecone_vs = VectorStoreManager()
@@ -40,7 +39,6 @@ async def rag(state: State):
         message = await chatbot_llm.ainvoke(
             [SystemMessage(content = create_prompt(info=[retrieved_context], llm_type="RAG_CHATBOT"))] + state["messages"]
         )
-        print("Rag Message: ", message)
         return {"messages": [message]}
     except Exception as e:
         print("❌RAG error: ", e)
@@ -99,7 +97,6 @@ async def tool_node(state):
 def route_after_tool(state) -> Literal["rag", "chatbot"]:
     last_message = state["messages"][-1]
 
-    print("Route after tool: ", last_message)
     if isinstance(last_message, ToolMessage) and last_message.name == "get_specifics":
         return "rag"
     

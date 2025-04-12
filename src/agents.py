@@ -59,10 +59,9 @@ async def get_specifics() -> str:
 @tool
 async def draft_email(body: str) -> None:
     """
-    Assist human with email draft generation by outputting email body
+    Generate email body when visitor wants to contact Ethan
     Args: body(str)
     """
-
     return body
 
 tools = [fetch_contributions, suspend_user, get_specifics, draft_email]

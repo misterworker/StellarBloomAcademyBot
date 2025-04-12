@@ -75,7 +75,6 @@ async def stream_graph_updates(
         rewind(int(num_rewind), config, user_input)
 
     node = None
-    full_content = ""
     is_interrupt = False
 
     async for message, event in graph.astream(state, config, stream_mode="messages"):
@@ -96,7 +95,6 @@ async def stream_graph_updates(
                 node = "chat"
 
         if node == "chat" and hasattr(message, "content") and message.content:
-            full_content += message.content
             yield f"data: {json.dumps({'response': message.content})}\n\n"
 
     # Once the full message is streamed
@@ -106,34 +104,24 @@ async def stream_graph_updates(
         return
 
 async def resume_graph_updates(action, config):
-    msg = ""
+    node = None
     tool_name = None
     tool_msg = None
     try:
-        async for resume_event in graph.astream(Command(resume={"action": action}), config):
-            print("Resume Event: ", resume_event)
-    
-            is_chatbot = resume_event.get("chatbot", False)
-            is_rag = resume_event.get("rag", False)
-            is_tool = resume_event.get("tools", False)
-            
-            if is_tool:
-                tool_name = resume_event["tools"]["messages"][-1].get("name", None)
-                tool_msg = resume_event["tools"]["messages"][-1].get("content", None)
-                continue
-            if is_chatbot:
-                msg = resume_event["chatbot"]["messages"][-1].content
-            elif is_rag:
-                msg = resume_event["rag"]["messages"][-1].content
-            
-            if msg:
-                return {"response": msg, "other_name": tool_name, "other_msg": tool_msg}
-        
-        return {"response": None, "other_name": tool_name, "other_msg": tool_msg}
+        async for message, resume_event in graph.astream(Command(resume={"action": action}), config, stream_mode="messages"):
+            if not node:
+                node = resume_event.get("langgraph_node", "chatbot")
+                print(node)
+                
+            if node == "chatbot":
+                yield f"data: {json.dumps({'response': message.content, 'other_name': 'chat', 'other_msg': None})}\n\n"
+            elif node == "rag":
+                yield f"data: {json.dumps({'response': message.content, 'other_name': 'rag', 'other_msg': None})}\n\n"
+            elif node == "email":
+                yield f"data: {json.dumps({'response': message.content, 'other_name': 'email', 'other_msg': None})}\n\n"
     
     except Exception as e:
         print(f"❌ Error in resume(): {e}")
-        return {"response": False, "other_name": None, "other_msg": None}
         
 async def clear_thread(thread_id: str):
     """Deletes all records related to the given thread_id."""
@@ -179,8 +167,13 @@ async def resume_process(input: ResumeInput):
         if action is None or not user_id:
             raise HTTPException(status_code=400, detail=f"Input not provided: {input}")
         config = {"configurable": {"thread_id": user_id}}
-        result = await resume_graph_updates(action, config)
-        return result
+        return StreamingResponse(
+            resume_graph_updates(
+                action,
+                config
+            ),
+            media_type="text/event-stream"
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
