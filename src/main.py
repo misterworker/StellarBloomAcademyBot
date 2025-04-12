@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
+from typing import AsyncGenerator
 
 from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
@@ -10,7 +12,7 @@ from build_graph import graph_builder
 from config import CORS_ORIGINS
 from helper import create_prompt, pool, ResumeInput, UserInput, WipeInput
 
-import os, sys, asyncio
+import os, sys, asyncio, json
 
 load_dotenv()
 DB_URI = os.getenv("DB_URI")
@@ -53,37 +55,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-async def stream_graph_updates(fingerprint: str, user_id: str, user_input: str, num_rewind: int, config: dict):
+async def stream_graph_updates(
+    fingerprint: str,
+    user_id: str,
+    user_input: str,
+    num_rewind: int,
+    config: dict
+) -> AsyncGenerator[str, None]:
     state = {
-        "messages": [SystemMessage(content=create_prompt(info=[], llm_type="chatbot")), {"role": "user", "content": user_input}],
+        "messages": [
+            SystemMessage(content=create_prompt(info=[], llm_type="chatbot")),
+            {"role": "user", "content": user_input}
+        ],
         "user_id": user_id,
         "fingerprint": fingerprint,
     }
+
     if num_rewind != 0:
         rewind(int(num_rewind), config, user_input)
-    async for event in graph.astream(state, config):
-        msg = ""
-        if "__interrupt__" in event:
-            return {"response":"", "other_name":"interrupt", "other_msg": None} #TODO: Turn other msg into tool name
 
-        elif "tools" in event:
-            # For tools that don't require human review
-            pass
+    looped = False
+    async for message, event in graph.astream(state, config, stream_mode="messages"):
+        if not looped:
+            kwargs = message.additional_kwargs
+            if not kwargs:
+                node = "chat"
+            elif kwargs.get("tool_calls", False):
+                node = "int" #Short for interrupt
+            else:
+                print("DebugElse")
+                node = "chat"
+            looped = True
 
-        elif "chatbot" in event:
-            for value in event.values():
-                msg = value["messages"][-1].content
-
-        if msg:
-            return {"response": msg, "other_name": None, "other_msg": None}
+        if node == "int":
+            yield f"data: {json.dumps({'other_name': 'interrupt', 'other_msg': None})}\n\n"
+            return
+        elif node == "chat":
+            # Yield normal chatbot message
+            yield f"data: {json.dumps({'response': message.content})}\n\n"
 
 async def resume_graph_updates(action, config):
     msg = ""
     tool_name = None
     tool_msg = None
     try:
+
         async for resume_event in graph.astream(Command(resume={"action": action}), config):
             # print("Resume Event: ", resume_event)
+
             is_chatbot = resume_event.get("chatbot", False)
             is_rag = resume_event.get("rag", False)
             is_tool = resume_event.get("tools", False)
@@ -159,19 +178,21 @@ async def resume_process(input: ResumeInput):
 @app.post("/chat")
 async def chat(input: UserInput):
     try:
-        user_id = input.user_id
-        fingerprint = input.fingerprint
-        user_input = input.user_input
-        num_rewind = input.num_rewind
-        
-        if not user_id or not fingerprint:
+        if not input.user_id or not input.fingerprint:
             raise HTTPException(status_code=400, detail=f"Input not provided: {input}")
 
-        config = {"configurable": {"thread_id": user_id}}
-        
-        result = await stream_graph_updates(fingerprint, user_id, user_input, num_rewind, config)
+        config = {"configurable": {"thread_id": input.user_id}}
 
-        return result
+        return StreamingResponse(
+            stream_graph_updates(
+                input.fingerprint,
+                input.user_id,
+                input.user_input,
+                input.num_rewind,
+                config,
+            ),
+            media_type="text/event-stream"
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
