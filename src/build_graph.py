@@ -65,9 +65,7 @@ def human_review_node(state) -> Command[Literal["chatbot", "tools"]]:
             "tool_call": tool_call,
         }
     )
-
     review_action = human_review["action"]
-
     # if approved, call the tool
     if review_action:
         return Command(goto="tools")

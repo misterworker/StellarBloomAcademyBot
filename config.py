@@ -10,3 +10,5 @@ elif app_env == "prod":
     CORS_ORIGINS = ["https://portfolio-phi-mocha-72.vercel.app/"]
 else:
     raise ValueError(f"Unknown environment: {app_env}")
+
+DISABLE_REWIND = True
