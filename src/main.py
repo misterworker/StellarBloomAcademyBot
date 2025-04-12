@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     graph = graph_builder.compile(checkpointer=checkpointer)
     
     # try:
-    #     with open("../graph_output.png", "wb") as f:
+    #     with open("./graph_output.png", "wb") as f:
     #         f.write(graph.get_graph().draw_mermaid_png())
     # except Exception as e:
     #     print("Exception while generating graph_output.png:", e)
@@ -101,9 +101,12 @@ async def resume_graph_updates(action, config):
     node = None
     try:
         async for message, resume_event in graph.astream(Command(resume={"action": action}), config, stream_mode="messages"):
-            if not node: node = resume_event.get("langgraph_node", None)
+            if not node: 
+                print("Resume Message: ", message)
+                print("Resume Event: ", resume_event)
+                node = resume_event.get("langgraph_node", None)
             if node is None: raise ValueError(f"Missing langgraph_node in resume_event: {resume_event}")
-
+            
             match node:
                 case "chatbot": yield f"data: {json.dumps({'response': message.content, 'other_name': 'chat', 'other_msg': None})}\n\n"
                 case "rag": yield f"data: {json.dumps({'response': message.content, 'other_name': 'rag', 'other_msg': None})}\n\n"

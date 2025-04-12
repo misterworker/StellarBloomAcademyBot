@@ -1,12 +1,12 @@
 from copy import deepcopy
 from typing_extensions import Literal
 
-from langchain_core.messages import ToolMessage, SystemMessage
+from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import Command, interrupt
 
-from agents import chatbot_llm, RAG_llm, fetch_contributions, suspend_user, get_specifics, draft_email
+from agents import chatbot_llm, RAG_llm, email_llm, fetch_contributions, get_specifics, suspend_user, send_message
 from helper import create_prompt, State, VectorStoreManager
 
 graph_builder = StateGraph(State)
@@ -42,6 +42,17 @@ async def rag(state: State):
         return {"messages": [message]}
     except Exception as e:
         print("❌RAG error: ", e)
+
+async def email(state: State):
+    try:
+        result = await email_llm.ainvoke(state["messages"])
+        subject = result.subject
+        body = result.body
+        return {
+            "messages": [AIMessage(content=f"Subject: {subject}\n\n{body}")]
+        }
+    except Exception as e:
+        print("❌Email error: ", e)
 
 #* Tool related nodes
 def route_after_llm(state) -> Literal[END, "human_review_node", "tools"]:
@@ -79,7 +90,7 @@ def human_review_node(state) -> Command[Literal["chatbot", "tools"]]:
     
 async def tool_node(state):
     new_messages = []
-    tools = {"suspend_user": suspend_user, "get_specifics": get_specifics, "draft_email": draft_email, "fetch_contributions": fetch_contributions}
+    tools = {"suspend_user": suspend_user, "get_specifics": get_specifics, "fetch_contributions": fetch_contributions, "send_message": send_message}
     tool_calls = state["messages"][-1].tool_calls
     for tool_call in tool_calls:
         tool = tools[tool_call["name"]]
@@ -94,11 +105,14 @@ async def tool_node(state):
         )
     return {"messages": new_messages}
 
-def route_after_tool(state) -> Literal["rag", "chatbot"]:
+def route_after_tool(state) -> Literal["rag", "email", "chatbot"]:
     last_message = state["messages"][-1]
 
     if isinstance(last_message, ToolMessage) and last_message.name == "get_specifics":
         return "rag"
+    
+    if isinstance(last_message, ToolMessage) and last_message.name == "send_message":
+        return "email"
     
     return "chatbot"
 
@@ -106,6 +120,7 @@ graph_builder.add_node("chatbot", chatbot)
 graph_builder.add_node("tools", tool_node)
 graph_builder.add_node(human_review_node)
 graph_builder.add_node("rag", rag)
+graph_builder.add_node("email", email)
 
 graph_builder.add_edge(START, "chatbot")
 graph_builder.add_conditional_edges(
@@ -117,4 +132,5 @@ graph_builder.add_conditional_edges(
     route_after_tool,
 )
 graph_builder.add_edge("rag", END)
+graph_builder.add_edge("email", END)
     

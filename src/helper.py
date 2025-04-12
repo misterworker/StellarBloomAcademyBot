@@ -55,6 +55,11 @@ class RAG(BaseModel):
     search_term: str = Field(description="Vector Store Retrieval Term")
     k_records: int = Field(description="How many records to retrieve?")
 
+class Email(BaseModel):
+    """Create subject and body"""
+    subject: str = Field(description="Email Subject")
+    body: str = Field(description="Email Body")
+
 #? Endpoint Inputs
 class UserInput(BaseModel):
     fingerprint: str
@@ -84,13 +89,15 @@ def create_prompt(info:list, llm_type:str):
 
             You are equipped to\\n
             1. Summarise projects\\n
-            2. Generate Email Body when visitor wants to contact Ethan\\n
+            2. Help user contact Ethan\\n
             3. Fetch Ethan's Github Contribution History
-            You can also suspend users for repeated inappropriate behaviour, but be lenient with this. Utilise the RAG Agent to fetch project details.
+            You can also suspend users for repeated inappropriate behaviour, but be lenient with this. 
+            Always utilise the RAG Agent to fetch project details.
+            Always utilise email Agent to contact Ethan, but only after they provide the message to send.
             Do not invoke more than one tool at a time.
 
             Strictly at the start of the conversation, let the user know projects include MaibelAI App, workAdvisor, 
-            used car price predictor (MLOps) and workout tracker, and your full capabilities.
+            used car price predictor (MLOps) and workout tracker, and list your full capabilities.
             """
     elif llm_type == "RAG":
         prompt = f"""
@@ -114,6 +121,12 @@ def create_prompt(info:list, llm_type:str):
             Provide only necessary information to the user, for example, if the user requests a github link, only provide that. 
             Do not blast the user with the entire overview or solution of the project.
             Records retrieved: {records}
+        """
+
+    elif llm_type == "email":
+        prompt = f"""
+        You are an assistent agent designed to create a subject and body for an email, based on the message or feedback that the visitor
+        wants to send. The recipient is always Ethan, the portfolio owner. Always craft a professional email.
         """
 
     else:

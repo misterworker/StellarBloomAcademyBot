@@ -7,7 +7,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.types import Command, interrupt
 
 from config import GPT_TYPE
-from helper import create_prompt, pool, RAG
+from helper import create_prompt, pool, RAG, Email
 
 import httpx, os
 
@@ -57,14 +57,16 @@ async def get_specifics() -> str:
     )
 
 @tool
-async def draft_email(body: str) -> None:
+async def send_message(message: str) -> str: #? Unused message to encourage llm to retrieve a message before calling the tool.
     """
-    Generate email body when visitor wants to contact Ethan
-    Args: body(str)
+    Contact Ethan/Send Feedback
     """
-    return body
+    return Command(
+        goto="email",
+        update={"messages": SystemMessage(create_prompt(info=[], llm_type="email"))},
+    )
 
-tools = [fetch_contributions, suspend_user, get_specifics, draft_email]
+tools = [fetch_contributions, suspend_user, get_specifics, send_message]
 
 chatbot_llm = ChatOpenAI(
     model=GPT_TYPE,
@@ -83,3 +85,12 @@ RAG_llm = ChatOpenAI(
     max_retries=2,
     api_key=OPENAI_API_KEY,
 ).with_structured_output(RAG, method="function_calling")
+
+email_llm = ChatOpenAI(
+    model=GPT_TYPE,
+    temperature=0.5,
+    max_tokens=2500,
+    timeout=20,
+    max_retries=2,
+    api_key=OPENAI_API_KEY,
+).with_structured_output(Email, method="function_calling")
