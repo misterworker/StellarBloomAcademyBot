@@ -74,35 +74,45 @@ async def stream_graph_updates(
     if num_rewind != 0:
         rewind(int(num_rewind), config, user_input)
 
-    looped = False
+    node = None
+    full_content = ""
+    is_interrupt = False
+
     async for message, event in graph.astream(state, config, stream_mode="messages"):
-        if not looped:
+        if not node:
             kwargs = message.additional_kwargs
             if not kwargs:
                 node = "chat"
             elif kwargs.get("tool_calls", False):
-                node = "int" #Short for interrupt
+                node = "pass"
+
+                last_tool_call = message.tool_call_chunks[-1] if message.tool_call_chunks else {}
+                tool_name = last_tool_call.get("name", None)
+                if tool_name != "suspend_user":
+                    node = "int"
+                    is_interrupt = True
             else:
                 print("DebugElse")
                 node = "chat"
-            looped = True
 
-        if node == "int":
-            yield f"data: {json.dumps({'other_name': 'interrupt', 'other_msg': None})}\n\n"
-            return
-        elif node == "chat":
-            # Yield normal chatbot message
+        if node == "chat" and hasattr(message, "content") and message.content:
+            full_content += message.content
             yield f"data: {json.dumps({'response': message.content})}\n\n"
+
+    # Once the full message is streamed
+    if is_interrupt:
+        # Interrupt AFTER stream finishes cleanly
+        yield f"data: {json.dumps({'other_name': 'interrupt', 'other_msg': None})}\n\n"
+        return
 
 async def resume_graph_updates(action, config):
     msg = ""
     tool_name = None
     tool_msg = None
     try:
-
         async for resume_event in graph.astream(Command(resume={"action": action}), config):
-            # print("Resume Event: ", resume_event)
-
+            print("Resume Event: ", resume_event)
+    
             is_chatbot = resume_event.get("chatbot", False)
             is_rag = resume_event.get("rag", False)
             is_tool = resume_event.get("tools", False)
