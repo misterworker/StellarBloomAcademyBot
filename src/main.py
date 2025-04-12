@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from typing import AsyncGenerator
 
@@ -9,7 +10,7 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.types import Command
 
 from build_graph import graph_builder
-from config import CORS_ORIGINS
+from config import CORS_ORIGINS, DISABLE_REWIND
 from helper import create_prompt, pool, ResumeInput, UserInput, WipeInput
 
 import os, sys, asyncio, json
@@ -17,12 +18,11 @@ import os, sys, asyncio, json
 load_dotenv()
 DB_URI = os.getenv("DB_URI")
 
-graph = None
-
 # Fix for Windows event loop compatibility with psycopg async
 if sys.platform.startswith('win'):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+graph = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Keep the connection pool open as long as the app is alive."""
@@ -45,8 +45,6 @@ async def lifespan(app: FastAPI):
     print("❌ Connection pool closed!")
 
 app = FastAPI(lifespan=lifespan)
-
-from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
@@ -71,54 +69,45 @@ async def stream_graph_updates(
         "fingerprint": fingerprint,
     }
 
-    if num_rewind != 0:
-        rewind(int(num_rewind), config, user_input)
+    if not DISABLE_REWIND:
+        if num_rewind != 0:
+            rewind(int(num_rewind), config, user_input)
 
-    node = None
-    is_interrupt = False
+    try:
+        node = None; is_interrupt = False
+        async for message, event in graph.astream(state, config, stream_mode="messages"):
+            if not node:
+                kwargs = message.additional_kwargs
+                if not kwargs: node = "chat"
+                elif kwargs.get("tool_calls", False):
+                    node = "chat"
+                    last_tool_call = message.tool_call_chunks[-1] if message.tool_call_chunks else {}
+                    tool_name = last_tool_call.get("name", ValueError("No Tool Name"))
+                    if tool_name != "suspend_user":
+                        node = "int"
+                        is_interrupt = True
+                else: raise ValueError("additional_kwargs not found")
 
-    async for message, event in graph.astream(state, config, stream_mode="messages"):
-        if not node:
-            kwargs = message.additional_kwargs
-            if not kwargs:
-                node = "chat"
-            elif kwargs.get("tool_calls", False):
-                node = "pass"
+            if node == "chat": yield f"data: {json.dumps({'response': message.content})}\n\n"
 
-                last_tool_call = message.tool_call_chunks[-1] if message.tool_call_chunks else {}
-                tool_name = last_tool_call.get("name", None)
-                if tool_name != "suspend_user":
-                    node = "int"
-                    is_interrupt = True
-            else:
-                print("DebugElse")
-                node = "chat"
-
-        if node == "chat" and hasattr(message, "content") and message.content:
-            yield f"data: {json.dumps({'response': message.content})}\n\n"
-
-    # Once the full message is streamed
-    if is_interrupt:
-        # Interrupt AFTER stream finishes cleanly
-        yield f"data: {json.dumps({'other_name': 'interrupt', 'other_msg': None})}\n\n"
-        return
+        if is_interrupt:
+            #! Interrupt AFTER stream finishes cleanly
+            yield f"data: {json.dumps({'other_name': 'interrupt', 'other_msg': None})}\n\n"
+            return
+    except Exception as e:
+        print(f"❌ Error in resume(): {e}")
 
 async def resume_graph_updates(action, config):
     node = None
-    tool_name = None
-    tool_msg = None
     try:
         async for message, resume_event in graph.astream(Command(resume={"action": action}), config, stream_mode="messages"):
-            if not node:
-                node = resume_event.get("langgraph_node", "chatbot")
-                print(node)
-                
-            if node == "chatbot":
-                yield f"data: {json.dumps({'response': message.content, 'other_name': 'chat', 'other_msg': None})}\n\n"
-            elif node == "rag":
-                yield f"data: {json.dumps({'response': message.content, 'other_name': 'rag', 'other_msg': None})}\n\n"
-            elif node == "email":
-                yield f"data: {json.dumps({'response': message.content, 'other_name': 'email', 'other_msg': None})}\n\n"
+            if not node: node = resume_event.get("langgraph_node", None)
+            if node is None: raise ValueError(f"Missing langgraph_node in resume_event: {resume_event}")
+
+            match node:
+                case "chatbot": yield f"data: {json.dumps({'response': message.content, 'other_name': 'chat', 'other_msg': None})}\n\n"
+                case "rag": yield f"data: {json.dumps({'response': message.content, 'other_name': 'rag', 'other_msg': None})}\n\n"
+                case "email": yield f"data: {json.dumps({'response': message.content, 'other_name': 'email', 'other_msg': None})}\n\n"
     
     except Exception as e:
         print(f"❌ Error in resume(): {e}")
@@ -158,25 +147,6 @@ def rewind(num_rewind:int, config, user_input):
                 graph.update_state(config, {"messages": [new_message]})
                 break
     # return config
-    
-@app.post("/resume")
-async def resume_process(input: ResumeInput):
-    try:
-        action = input.action
-        user_id = input.user_id
-        if action is None or not user_id:
-            raise HTTPException(status_code=400, detail=f"Input not provided: {input}")
-        config = {"configurable": {"thread_id": user_id}}
-        return StreamingResponse(
-            resume_graph_updates(
-                action,
-                config
-            ),
-            media_type="text/event-stream"
-        )
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat")
 async def chat(input: UserInput):
@@ -193,6 +163,25 @@ async def chat(input: UserInput):
                 input.user_input,
                 input.num_rewind,
                 config,
+            ),
+            media_type="text/event-stream"
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/resume")
+async def resume_process(input: ResumeInput):
+    try:
+        action = input.action
+        user_id = input.user_id
+        if action is None or not user_id:
+            raise HTTPException(status_code=400, detail=f"Input not provided: {input}")
+        config = {"configurable": {"thread_id": user_id}}
+        return StreamingResponse(
+            resume_graph_updates(
+                action,
+                config
             ),
             media_type="text/event-stream"
         )
