@@ -49,7 +49,7 @@ async def email(state: State):
         subject = result.subject
         body = result.body
         return {
-            "messages": [AIMessage(content=f"Subject: {subject}\n\n{body}")]
+            "messages": [AIMessage(content=f"Subject: {subject}\n\nBody: {body}")]
         }
     except Exception as e:
         print("❌Email error: ", e)

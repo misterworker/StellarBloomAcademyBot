@@ -1,3 +1,4 @@
+from collections import deque
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -74,20 +75,22 @@ async def stream_graph_updates(
             rewind(int(num_rewind), config, user_input)
 
     try:
-        node = None; is_interrupt = False
+        no_msg_counter = 0; node = None; is_interrupt = False;
         async for message, event in graph.astream(state, config, stream_mode="messages"):
-            if not node:
-                kwargs = message.additional_kwargs
-                if not kwargs: node = "chat"
-                elif kwargs.get("tool_calls", False):
-                    node = "chat"
-                    last_tool_call = message.tool_call_chunks[-1] if message.tool_call_chunks else {}
-                    tool_name = last_tool_call.get("name", ValueError("No Tool Name"))
-                    if tool_name != "suspend_user":
-                        node = "int"
-                        is_interrupt = True
-                else: raise ValueError("additional_kwargs not found")
 
+            if message.content == "": #! 2nd Message that has empty content may contain tool call
+                no_msg_counter += 1
+                if no_msg_counter <= 2:
+                    kwargs = message.additional_kwargs
+                    if not kwargs: node = "chat"
+                    elif kwargs.get("tool_calls", False):
+                        node = "chat"
+                        last_tool_call = message.tool_call_chunks[-1] if message.tool_call_chunks else {}
+                        tool_name = last_tool_call.get("name", ValueError("No Tool Name"))
+                        if tool_name and tool_name != "suspend_user":
+                            node = "int"
+                            is_interrupt = True
+                    else: raise ValueError("additional_kwargs not found")
             if node == "chat": yield f"data: {json.dumps({'response': message.content})}\n\n"
 
         if is_interrupt:
@@ -95,13 +98,13 @@ async def stream_graph_updates(
             yield f"data: {json.dumps({'other_name': 'interrupt', 'other_msg': None})}\n\n"
             return
     except Exception as e:
-        print(f"❌ Error in resume(): {e}")
+        print(f"❌ Error in stream(): {e}")
 
 async def resume_graph_updates(action, config):
     node = None
     try:
         async for message, resume_event in graph.astream(Command(resume={"action": action}), config, stream_mode="messages"):
-            if not node: 
+            if not node:
                 print("Resume Message: ", message)
                 print("Resume Event: ", resume_event)
                 node = resume_event.get("langgraph_node", None)
@@ -110,7 +113,7 @@ async def resume_graph_updates(action, config):
             match node:
                 case "chatbot": yield f"data: {json.dumps({'response': message.content, 'other_name': 'chat', 'other_msg': None})}\n\n"
                 case "rag": yield f"data: {json.dumps({'response': message.content, 'other_name': 'rag', 'other_msg': None})}\n\n"
-                case "email": yield f"data: {json.dumps({'response': message.content, 'other_name': 'email', 'other_msg': None})}\n\n"
+                case "email": yield f"data: {json.dumps({'response': message.content, 'other_name': 'email', 'other_msg': message.content})}\n\n"
     
     except Exception as e:
         print(f"❌ Error in resume(): {e}")
