@@ -2,35 +2,30 @@ import requests, json
 
 API_URL = "http://127.0.0.1:8000"
 
-def chat_with_bot(user_id: str, user_input: str, fingerprint: str, num_rewind: int = 0):
-    """Start a conversation with the chatbot using streaming."""
+def chat_with_bot(user_id: str, user_input: str, name: str, bot_name: str):
+    """Start a conversation with the chatbot."""
     payload = {
         "user_id": user_id,
         "user_input": user_input,
-        "fingerprint": fingerprint,
-        "num_rewind": num_rewind
+        "name": name,
+        "bot_name": bot_name,
     }
 
-    with requests.post(f"{API_URL}/chat", json=payload, stream=True) as response:
-        if response.status_code == 200:
-            print("ASSISTANT CHAT:", end=" ", flush=True)
-            for line in response.iter_lines():
-                if line:
-                    decoded = line.decode("utf-8").replace("data: ", "")
-                    try:
-                        data = json.loads(decoded)
-                        if data.get("other_name") == "interrupt":
-                            print("\nHuman Review Time!")
-                            return True
-                        if "response" in data:
-                            print(data["response"], end="", flush=True)
-                    except Exception as e:
-                        print(f"\n[Stream Parse Error] {e} — line: {decoded}")
-            print()  # end line after stream
-            return False
+    response = requests.post(f"{API_URL}/chat", json=payload)
+    
+    if response.status_code == 200:
+        data = response.json()
+        response = data["response"]
+        other_name = data["other_name"]
+        if other_name == "interrupt":
+            print("Human Review Time!")
+            return True
         else:
-            print("Error:", response.status_code, response.text)
+            print("ASSISTANT CHAT:", response)
             return False
+    else:
+        print("Error:", response.status_code, response.text)
+        return False
 
 
 def resume_conversation(user_id: str, action: bool):
@@ -84,13 +79,12 @@ def wipe_thread(user_id: str):
 def interact_with_chatbot():
     """Interact with the chatbot through the FastAPI API."""
     user_id = "abc"
-    fingerprint = "pseudoFingerprint"
     user_input = input("You (w to wipe thread): ")
     if user_input == "w":
         wipe_thread(user_id)
         return
 
-    conversation_active = chat_with_bot(user_id, user_input, fingerprint)
+    conversation_active = chat_with_bot(user_id, user_input, "Ethan", "Orion")
 
     # If the conversation requires user input to continue, ask the user
     while conversation_active:
