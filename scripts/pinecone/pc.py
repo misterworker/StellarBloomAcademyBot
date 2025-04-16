@@ -11,7 +11,7 @@ load_dotenv()
 pinecone_api_key = os.environ["PINECONE_API_KEY"]
 pc = Pinecone(api_key=pinecone_api_key)
 
-index_name = "portfolio"
+index_name = "stellarbloom"
 
 existing_indexes = [index_info["name"] for index_info in pc.list_indexes()]
 print("Existing Indexes: ", existing_indexes)
@@ -35,16 +35,13 @@ if index_name not in existing_indexes:
 
 # Connect to the index
 index = pc.Index(index_name)
-overview = "C:/Users/ethan/Documents/General/Portfolio-Bot/data/overview"
-solution = "C:/Users/ethan/Documents/General/Portfolio-Bot/data/solution"
-overview_proj = ["ov_maibel_app", "ov_mlops", "ov_workAdvisor", "ov_workoutTracker"]
-solution_proj = ["sl_maibel_app", "sl_mlops", "sl_workAdvisor", "sl_workoutTracker"]
+stellarbloom = "C:/Users/ethan/Documents/Work/Stellar Bloom Academy/bot/data/stellarbloom"
+overview_proj = ["celestial_guides", "origin", "philosophy_of_light", "starbourne_journey", "the_bloom_rite"]
 # main_portfolio = "C:/Users/ethan/Documents/General/Portfolio-Bot/data/"
 
 FILE_PATHS = [
-    f"{overview}/{proj}.txt" for proj in overview_proj
+    f"{stellarbloom}/{proj}.txt" for proj in overview_proj
 ]
-FILE_PATHS.extend([f"{solution}/{proj}.txt" for proj in solution_proj])
 
 print("File Paths: ", FILE_PATHS[:3])
 
