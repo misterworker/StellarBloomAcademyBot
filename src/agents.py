@@ -3,6 +3,7 @@ from typing import Annotated
 
 from langchain_core.messages import SystemMessage
 from langchain_core.tools import tool, InjectedToolArg
+from langchain_deepseek import ChatDeepSeek
 from langchain_openai import ChatOpenAI
 
 from langgraph.types import Command, interrupt
@@ -15,17 +16,27 @@ import os
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 
 tools = []
 
-chatbot_llm = ChatOpenAI(
+gpt_chatbot = ChatOpenAI(
     model=GPT_TYPE,
     temperature=0.9,
-    max_tokens=5000,
+    max_tokens=None,
     timeout=20,
     max_retries=2,
     api_key=OPENAI_API_KEY,
 ).bind_tools(tools)
+
+ds_chatbot = ChatDeepSeek(
+    model="deepseek-chat",
+    temperature=0.9,
+    max_tokens=None,
+    timeout=30,
+    max_retries=1,
+    api_key=DEEPSEEK_API_KEY,
+)
 
 identity_validator = ChatOpenAI(
     model="gpt-4o-mini",

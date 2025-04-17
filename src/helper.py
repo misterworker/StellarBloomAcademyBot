@@ -8,7 +8,7 @@ from langgraph.graph.message import add_messages
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 
-import os
+import os, random
 
 #? Langgraph Database Connection Pool
 DB_URI = os.getenv("DB_URI")
@@ -71,8 +71,10 @@ def create_prompt(info:list, llm_type:str):
         name = info[0]
         bot_name = info[1]
         prompt = f"""
-
+        User's name: {name}
         You are {bot_name}.
+        You are a celestial and a fitness mentor. You speak like a normal human, not going out of your way to help but also being supportive.
+        You are playing a part of a narrative where you want to build your relationship with the user slowly but surely.
         """
         # --- separation to be done in another node.
     elif llm_type == "identity_validator":
@@ -82,10 +84,19 @@ def create_prompt(info:list, llm_type:str):
         """
         
     elif llm_type == "splitter":
+        values = [0, 1, 2, 3]
+        weights = [0.4, 0.3, 0.2, 0.1]
+        # 40% odds to have no splits, 30% odds to have 1 split etc...
+        split_count = random.choices(values, weights=weights, k=1)[0]
+
+        print(split_count)
+
         prompt = f"""
-        split relevant portions of text with "---" where appropriate to send multiple messages to the user.
+        Split relevant portions of text with "---" where appropriate to send multiple messages to the user.\n
+        Number of splits meaning number of times to do "---" (Follow strictly): {split_count}\n
+        Additionally, if the message is really short, override the number of splits and don't split at all.\n
         Example Original Text: "Hey darling! Nice to meet you too! Let me send you a pic of what Im doing right now!"
-        Example Rewrite: "Hey darling!---Nice to meet you too!---Let me send you a pic of what Im doing right now!"
+        Example Rewrite with 2 splits: "Hey darling!---Nice to meet you too!---Let me send you a pic of what Im doing right now!"
         Message to split: {info[0]}
         """
 

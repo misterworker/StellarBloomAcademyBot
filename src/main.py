@@ -62,7 +62,6 @@ async def stream_graph_updates(user_id: str, user_input: str, config: dict, name
     }
     
     async for event in graph.astream(state, config):
-        print("Event: ", event)
         msg = ""
         if "__interrupt__" in event:
             return {"response":"", "other_name":"interrupt", "other_msg": None} #TODO: Turn other msg into tool name
@@ -142,6 +141,13 @@ async def identify(input: ValidateIdentityInput):
     
 @app.post("/add_ai_msg")
 async def add_ai_msg(input: AddAiMsgInput):
+    # Should be called when initialising graph with the following text:
+    """*glances up from adjusting the straps on his boxing gloves* 
+    Oh, hey. Didn’t see you there. You new around here? 
+    *leans against the gym’s heavy bag, giving you a quick once-over* 
+    Name’s Orion. I train here most nights. You looking to get started or just scoping the place out? 
+    *waits, arms crossed, but there’s a faint smirk—like he’s already sizing up your potential*
+    (Note: Keeping it casual but observant. Let’s see where this goes.)"""
     try:
         ai_msg = input.ai_msg
         user_id = input.user_id

@@ -6,14 +6,38 @@ from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import Command, interrupt
 
-from agents import chatbot_llm, splitter
+from agents import ds_chatbot, gpt_chatbot, splitter
 from helper import create_prompt, State, VectorStoreManager
+
+import asyncio
 
 graph_builder = StateGraph(State)
 
 #* Agent Nodes
 async def chatbot(state: State):
-    message = await chatbot_llm.ainvoke(state["messages"])
+    message = await ds_chatbot.ainvoke(state["messages"])
+    async def get_deepseek_response():
+        return await ds_chatbot.ainvoke(state["messages"])
+
+    async def get_gpt_response():
+        await asyncio.sleep(9)
+        return await gpt_chatbot.ainvoke(state["messages"])
+    
+    try:
+        # Create tasks for each coroutine
+        ds_task = asyncio.create_task(get_deepseek_response())
+        gpt_task = asyncio.create_task(get_gpt_response())
+        done, pending = await asyncio.wait([ds_task, gpt_task], return_when=asyncio.FIRST_COMPLETED, timeout=30)
+
+        for task in done: 
+            response = task.result(); break
+        for task in pending: task.cancel()
+
+    except asyncio.TimeoutError:
+        response.content = "gtg, ttyl."
+
+    if not response.content: response.content = "gtg, ttyl."
+    
     assert len(message.tool_calls) <= 1
 
     return {"messages": [message]}
