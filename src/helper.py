@@ -1,6 +1,6 @@
 from pinecone import Pinecone
-from pydantic import BaseModel, Field
 from psycopg_pool import AsyncConnectionPool
+from pydantic import BaseModel, Field
 from typing import Annotated
 from typing_extensions import TypedDict
 
@@ -57,8 +57,12 @@ class UserInput(BaseModel):
 class WipeInput(BaseModel):
     user_id: str
 
-class IdentifyInput(BaseModel):
+class ValidateIdentityInput(BaseModel):
     user_input: str
+
+class AddAiMsgInput(BaseModel):
+    ai_msg: str
+    user_id: str
 
 #? Helper functions
 def create_prompt(info:list, llm_type:str):
@@ -67,7 +71,7 @@ def create_prompt(info:list, llm_type:str):
         name = info[0]
         bot_name = info[1]
         prompt = f"""
-        User's name: {name}
+
         You are {bot_name}.
         """
         # --- separation to be done in another node.

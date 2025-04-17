@@ -76,12 +76,28 @@ def wipe_thread(user_id: str):
     else:
         print("Error:", response.status_code, response.text)
 
+def add_ai_msg(ai_msg: str, user_id: str):
+    payload = {
+        "ai_msg": ai_msg,
+        "user_id": user_id,
+    }
+    response = requests.post(f"{API_URL}/add_ai_msg", json=payload)
+    if response.status_code == 200:
+        data = response.json()
+        print("ASSISTANT ADD AI:", data.get("response", "No message from assistant"))
+    else:
+        print("Error:", response.status_code, response.text)
+
 def interact_with_chatbot():
     """Interact with the chatbot through the FastAPI API."""
     user_id = "abc"
-    user_input = input("You (w to wipe thread): ")
+    user_input = input("You (w -> wipe thread a -> add ai msg to thread): ")
     if user_input == "w":
         wipe_thread(user_id)
+        return
+    elif user_input == "a":
+        ai_msg = input("Type AI message to add to graph: ")
+        add_ai_msg(ai_msg, user_id)
         return
 
     conversation_active = chat_with_bot(user_id, user_input, "Ethan", "Orion")

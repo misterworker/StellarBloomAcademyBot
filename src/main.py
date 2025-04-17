@@ -6,16 +6,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from typing import AsyncGenerator
 
-from langchain_core.messages import HumanMessage, SystemMessage, trim_messages
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, trim_messages
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.types import Command
 
 from build_graph import graph_builder
 from config import CORS_ORIGINS
-from helper import create_prompt, pool, UserInput, WipeInput, IdentifyInput
+from helper import pool, create_prompt, AddAiMsgInput, UserInput, ValidateIdentityInput, WipeInput
 from independents import validate_identity
 
-import os, sys, asyncio, json
+import asyncio, json, os, sys
 
 load_dotenv()
 DB_URI = os.getenv("DB_URI")
@@ -97,6 +97,7 @@ async def clear_thread(thread_id: str):
                 print(f"❌ Error in wipe(): {exception}")
                 return {"response": False, "other_name": None, "other_msg": None}
 
+
 @app.post("/chat")
 async def chat(input: UserInput):
     try:
@@ -131,10 +132,24 @@ async def wipe(input: WipeInput):
         raise HTTPException(status_code=500, detail=str(e))
     
 @app.post("/identify")
-async def identify(input: IdentifyInput):
+async def identify(input: ValidateIdentityInput):
     try:
         is_valid = await validate_identity(input.user_input)
         return is_valid
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/add_ai_msg")
+async def add_ai_msg(input: AddAiMsgInput):
+    try:
+        ai_msg = input.ai_msg
+        user_id = input.user_id
+        transformed_ai_msg = AIMessage(content=ai_msg)
+        config = {"configurable": {"thread_id": user_id}}
+        await graph.aupdate_state(config, {"messages": [transformed_ai_msg]})
+
+        return {"response": "Successfully added ai message"}
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
