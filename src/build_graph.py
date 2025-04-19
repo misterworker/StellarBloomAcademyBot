@@ -6,16 +6,16 @@ from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import Command, interrupt
 
-from agents import ds_chatbot, gpt_chatbot, splitter
+from agents import ds_chatbot, gpt_chatbot, gpt_lorebot, splitter, get_lore
 from helper import create_prompt, State, VectorStoreManager
 
 import asyncio
 
 graph_builder = StateGraph(State)
 
+
 #* Agent Nodes
 async def chatbot(state: State):
-    message = await ds_chatbot.ainvoke(state["messages"])
     async def get_deepseek_response():
         return await ds_chatbot.ainvoke(state["messages"])
 
@@ -38,9 +38,28 @@ async def chatbot(state: State):
 
     if not response.content: response.content = "gtg, ttyl."
     
-    assert len(message.tool_calls) <= 1
+    assert len(response.tool_calls) <= 1
 
-    return {"messages": [message]}
+    return {"messages": [response]}
+
+async def lorebot(state: State):
+    try:
+        last_message = state["messages"][-1]
+        print("Last Message: ", last_message)
+        pinecone_vs = VectorStoreManager()
+        retrieved_docs = pinecone_vs.retrieve_from_vector_store(last_message, 3)
+        retrieved_context = "\n".join([res.page_content for res in retrieved_docs])
+        result = await gpt_lorebot.ainvoke([SystemMessage(create_prompt(info=[last_message, retrieved_context], llm_type="lore_validator"))])
+        print("rag validator result: ", result)
+        if result.is_neccessary:
+            return Command(
+                goto="chatbot",
+                update={"messages": retrieved_context},
+            )
+        else:
+            return "chatbot"
+    except Exception as e:
+        print("❌RAG error: ", e)
 
 async def splitter_bot(state: State):
     last_message = state["messages"][-1]
@@ -57,7 +76,7 @@ def route_after_llm(state) -> Literal["splitter", "tools"]:
     
 async def tool_node(state):
     new_messages = []
-    tools = {}
+    tools = tools = {"get_lore": get_lore}
     tool_calls = state["messages"][-1].tool_calls
     for tool_call in tool_calls:
         tool = tools[tool_call["name"]]
@@ -72,16 +91,21 @@ async def tool_node(state):
         )
     return {"messages": new_messages}
 
-def route_after_tool(state) -> Literal["chatbot"]:
+def route_after_tool(state) -> Literal["lore_rag", "chatbot"]:
     last_message = state["messages"][-1]
+
+    if isinstance(last_message, ToolMessage) and last_message.name == "get_lore":
+        return "lore_rag"
     
     return "chatbot"
 
 graph_builder.add_node("chatbot", chatbot)
+graph_builder.add_node("lore_rag", lorebot)
 graph_builder.add_node("splitter", splitter_bot)
 graph_builder.add_node("tools", tool_node)
 
 graph_builder.add_edge(START, "chatbot")
+graph_builder.add_edge("lore_rag", "chatbot")
 graph_builder.add_conditional_edges(
     "chatbot",
     route_after_llm,

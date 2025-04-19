@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
     # except Exception as e:
     #     print("Exception while generating graph_output.png:", e)
 
-    print("✅ Connection pool and graph initialized!")
+    # print("✅ Connection pool and graph initialized!")
     yield  # Yield control back to FastAPI while keeping the pool open
 
     await pool.close()
@@ -115,6 +115,7 @@ async def chat(input: UserInput):
         return result
     
     except Exception as e:
+        print("Chat Error: ", e)
         raise HTTPException(status_code=500, detail=str(e))
     
 @app.post("/wipe")

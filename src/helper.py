@@ -43,6 +43,10 @@ class VectorStoreManager:
         return results
     
 #? Class for Structured Outputs
+class ValidateLore(BaseModel):
+    """Check if lore provided is necessary for user query"""
+    is_necessary: bool = Field(description="Is the provided game lore neccessary for the user query?")
+
 class Identify(BaseModel):
     """Check if information provided is valid"""
     is_valid: bool = Field(description="is email, age and name provided and valid?")
@@ -66,7 +70,6 @@ class AddAiMsgInput(BaseModel):
 
 #? Helper functions
 def create_prompt(info:list, llm_type:str):
-    print("LLM Type: ", llm_type)
     if llm_type == "chatbot":
         name = info[0]
         bot_name = info[1]
@@ -76,7 +79,13 @@ def create_prompt(info:list, llm_type:str):
         You are a celestial and a fitness mentor. You speak like a normal human, not going out of your way to help but also being supportive.
         You are playing a part of a narrative where you want to build your relationship with the user slowly but surely.
         """
-        # --- separation to be done in another node.
+
+    elif llm_type == "lore_validator":
+        prompt = f"""
+        User Question: {info[0]}\\n
+        Lore retrieved: {info[1]}
+        """
+
     elif llm_type == "identity_validator":
         prompt = f"""
         Check if user has provided a valid name, age and email in the message.
@@ -92,11 +101,10 @@ def create_prompt(info:list, llm_type:str):
         print(split_count)
 
         prompt = f"""
-        Split relevant portions of text with "---" where appropriate to send multiple messages to the user.\n
-        Number of splits meaning number of times to do "---" (Follow strictly): {split_count}\n
-        Additionally, if the message is really short, override the number of splits and don't split at all.\n
+        Split relevant portions of text with "---" where appropriate to send multiple messages to the user.\\n
+        Split {split_count} times (Follow split count strictly). Split 0 times if message is too short.
         Example Original Text: "Hey darling! Nice to meet you too! Let me send you a pic of what Im doing right now!"
-        Example Rewrite with 2 splits: "Hey darling!---Nice to meet you too!---Let me send you a pic of what Im doing right now!"
+        Example Rewrite with 2 splits: "Hey darling!---Nice to meet you too!---Let me send you a pic of what Im doing right now!"\\n
         Message to split: {info[0]}
         """
 
